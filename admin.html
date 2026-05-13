@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voltra Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#0A0A0B; --surface:#13131A; --border:#1F1F2A; --fg:#F5F5F7; --muted:#8B8B96; --brand:#B4FF39; --danger:#FF3D71; }
+  * { box-sizing: border-box; margin:0; padding:0; }
+  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--fg); min-height:100vh; }
+  .num { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+  .login { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:16px; }
+  .card { background: var(--surface); border:1px solid var(--border); border-radius:14px; padding:24px; }
+  .login .card { width: 100%; max-width: 400px; }
+  h1 { font-size:24px; margin-bottom:8px; }
+  h2 { font-size:20px; margin-bottom:6px; }
+  .muted { color: var(--muted); font-size:14px; margin-bottom:24px; }
+  label { display:block; margin-bottom:16px; }
+  label .lbl { font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); margin-bottom:6px; display:block; }
+  input, select, textarea { width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 12px; color:var(--fg); font-family:inherit; font-size:14px; outline:none; }
+  input:focus, select:focus, textarea:focus { border-color: var(--brand); }
+  button { background: var(--brand); color: var(--bg); border:none; border-radius:8px; padding:10px 20px; font-weight:600; cursor:pointer; font-size:14px; }
+  button:hover { background:#8FCC2E; }
+  button.ghost { background:transparent; color:var(--muted); border:1px solid var(--border); }
+  button.ghost:hover { color:var(--fg); }
+  button.danger { background:transparent; color:var(--danger); border:1px solid var(--danger); }
+  .topbar { display:flex; justify-content:space-between; align-items:center; padding:16px 24px; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:10; background:rgba(10,10,11,0.92); backdrop-filter:blur(10px); }
+  .logo { display:flex; align-items:center; gap:10px; }
+  .logo svg { width:28px; height:28px; }
+  .logo .name { font-family:'JetBrains Mono',monospace; letter-spacing:0.15em; font-weight:600; }
+  .logo .tag { background:var(--brand); color:var(--bg); font-size:10px; padding:2px 6px; border-radius:4px; margin-left:6px; font-family:'JetBrains Mono',monospace; }
+  .content { padding:24px; max-width:1400px; margin:0 auto; }
+  .toolbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:16px; }
+  table { width:100%; border-collapse: collapse; }
+  th { text-align:left; padding:12px 16px; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); border-bottom:1px solid var(--border); font-weight:500; }
+  td { padding:14px 16px; border-bottom:1px solid var(--border); font-size:14px; }
+  tr:hover td { background: rgba(180,255,57,0.03); }
+  .pill { display:inline-block; padding:3px 8px; border-radius:5px; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.05em; }
+  .pill.active { background:rgba(180,255,57,0.1); color:var(--brand); }
+  .pill.paused { background:rgba(255,178,61,0.1); color:#FFB23D; }
+  .pill.suspended { background:rgba(255,61,113,0.1); color:var(--danger); }
+  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:24px; }
+  .stat { background: var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px; }
+  .stat .lbl { font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); margin-bottom:8px; }
+  .stat .val { font-family:'JetBrains Mono',monospace; font-size:24px; font-weight:600; }
+  .modal { position:fixed; inset:0; background:rgba(10,10,11,0.85); backdrop-filter:blur(8px); display:flex; align-items:center; justify-content:center; z-index:100; padding:16px; }
+  .modal .card { max-width:580px; width:100%; max-height:90vh; overflow-y:auto; }
+  .row { display:flex; gap:12px; }
+  .row label { flex:1; }
+  .actions { display:flex; gap:8px; margin-top:20px; }
+  .err { color:var(--danger); font-size:13px; margin:8px 0; min-height:18px; }
+  .endpoint-info { background: rgba(180,255,57,0.05); border:1px solid rgba(180,255,57,0.2); border-radius:8px; padding:10px 12px; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted); margin-bottom:16px; word-break:break-all; }
+  .endpoint-info code { color:var(--brand); }
+  .loading { text-align:center; padding:40px; color:var(--muted); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const LOGO = '<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="7" fill="#13131A" stroke="#1F1F2A"/><path d="M18 5 L9 17.5 H13.8 L13 27 L23 13 H17.2 L18 5 Z" fill="#B4FF39"/></svg>';
+
+let API = localStorage.getItem('voltra_api') || 'http://localhost:4000';
+let TOKEN = localStorage.getItem('voltra_admin_token') || null;
+let USER = JSON.parse(localStorage.getItem('voltra_admin_user') || 'null');
+
+const $ = (id) => document.getElementById(id);
+const fmt = (n, d=2) => n != null ? Number(n).toLocaleString('en-US', { minimumFractionDigits:d, maximumFractionDigits:d }) : '—';
+const fmtInt = (n) => n != null ? Number(n).toLocaleString('en-US') : '—';
+const esc = (s) => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+async function api(path, opts={}) {
+  const headers = { 'Content-Type':'application/json', ...(opts.headers || {}) };
+  if (TOKEN) headers.Authorization = 'Bearer ' + TOKEN;
+  const r = await fetch(API + path, { ...opts, headers });
+  const data = await r.json().catch(() => ({ error: 'Network error' }));
+  if (!r.ok) throw new Error(data.error || 'Error ' + r.status);
+  return data;
+}
+
+function logout() {
+  TOKEN = null; USER = null;
+  localStorage.removeItem('voltra_admin_token');
+  localStorage.removeItem('voltra_admin_user');
+  render();
+}
+
+function setAuth(token, user) {
+  TOKEN = token; USER = user;
+  localStorage.setItem('voltra_admin_token', token);
+  localStorage.setItem('voltra_admin_user', JSON.stringify(user));
+}
+
+function renderLogin() {
+  $('app').innerHTML =
+    '<div class="login"><div style="width:100%; max-width:400px;">' +
+    '<div style="display:flex; align-items:center; gap:10px; justify-content:center; margin-bottom:24px;">' +
+    LOGO + '<span style="font-family:\'JetBrains Mono\',monospace; letter-spacing:0.18em; font-weight:600; font-size:18px;">VOLTRA</span>' +
+    '<span class="pill active" style="font-size:11px;">ADMIN</span></div>' +
+    '<div class="card"><h1>Admin login</h1><p class="muted">Solo admin: gestisci master e clienti.</p>' +
+    '<div class="endpoint-info">API: <code>' + esc(API) + '</code> <button class="ghost" style="padding:4px 10px; font-size:11px; margin-left:8px;" onclick="changeApi()">Cambia</button></div>' +
+    '<label><div class="lbl">Email</div><input type="email" id="email" value="admin@voltrasolutions.com"></label>' +
+    '<label><div class="lbl">Password</div><input type="password" id="password" value="admin1234"></label>' +
+    '<div class="err" id="login-err"></div>' +
+    '<button onclick="doLogin()" style="width:100%; padding:12px;">Login</button></div></div></div>';
+}
+
+window.changeApi = () => {
+  const v = prompt('URL backend (es: https://voltra-backend.onrender.com)', API);
+  if (v) { API = v.replace(/\/$/, ''); localStorage.setItem('voltra_api', API); render(); }
+};
+
+window.doLogin = async () => {
+  try {
+    const { token, user } = await api('/api/auth/login', { method:'POST', body: JSON.stringify({ email: $('email').value, password: $('password').value }) });
+    if (user.role !== 'admin') { $('login-err').textContent = 'Account non admin'; return; }
+    setAuth(token, user); render();
+  } catch (e) { $('login-err').textContent = e.message; }
+};
+
+async function renderDashboard() {
+  $('app').innerHTML =
+    '<div class="topbar"><div class="logo">' + LOGO + '<span class="name">VOLTRA<span class="tag">ADMIN</span></span></div>' +
+    '<div style="display:flex; gap:16px; align-items:center; font-size:14px;">' +
+    '<span style="color:var(--muted);">' + esc(USER.name) + '</span>' +
+    '<button class="ghost" onclick="logout()">Logout</button></div></div>' +
+    '<div class="content"><div class="toolbar">' +
+    '<div style="display:flex; gap:8px;">' +
+    '<button onclick="showTab(\'masters\')" id="tab-masters">Masters</button>' +
+    '<button onclick="showTab(\'stats\')" id="tab-stats" class="ghost">Stats</button>' +
+    '</div><button onclick="openMasterModal()">+ Aggiungi Master</button></div>' +
+    '<div id="panel"></div></div>';
+  showTab('masters');
+}
+
+window.showTab = (tab) => {
+  document.querySelectorAll('[id^=tab-]').forEach(b => b.classList.add('ghost'));
+  const active = $('tab-' + tab);
+  if (active) active.classList.remove('ghost');
+  if (tab === 'masters') return loadMasters();
+  if (tab === 'stats') return loadStats();
+};
+
+async function loadMasters() {
+  $('panel').innerHTML = '<div class="loading">Loading masters…</div>';
+  try {
+    const masters = await api('/api/masters');
+    if (masters.length === 0) {
+      $('panel').innerHTML = '<div class="card" style="text-align:center; padding:40px;"><p class="muted" style="margin-bottom:16px;">Nessun master ancora. Aggiungi il primo.</p><button onclick="openMasterModal()">+ Aggiungi Master</button></div>';
+      return;
+    }
+    let html = '<div class="card" style="padding:0; overflow-x:auto;"><table><thead><tr>' +
+      '<th>Name</th><th>Style</th><th>ROI 12M</th><th>Max DD</th><th>Win</th><th>Sharpe</th><th>Followers</th><th>Fee</th><th>Status</th><th></th></tr></thead><tbody>';
+    masters.forEach(m => {
+      html += '<tr>' +
+        '<td><strong>' + esc(m.name) + '</strong><div style="font-size:11px; color:var(--muted);">' + esc(m.country||'') + ' · ' + (m.experience||0) + 'y</div></td>' +
+        '<td style="color:var(--muted);">' + esc(m.style||'—') + '</td>' +
+        '<td class="num" style="color:var(--brand);">+' + fmt(m.roi_12m,1) + '%</td>' +
+        '<td class="num" style="color:var(--danger);">-' + fmt(m.drawdown,1) + '%</td>' +
+        '<td class="num">' + fmt(m.win_rate,1) + '%</td>' +
+        '<td class="num">' + fmt(m.sharpe,2) + '</td>' +
+        '<td class="num">' + fmtInt(m.followers) + '</td>' +
+        '<td class="num">' + fmt(m.fee_split,0) + '%</td>' +
+        '<td><span class="pill ' + esc(m.status) + '">' + esc(m.status) + '</span></td>' +
+        '<td style="text-align:right; white-space:nowrap;">' +
+        '<button class="ghost" style="font-size:12px; padding:6px 10px;" onclick="editMaster(' + m.id + ')">Edit</button> ' +
+        '<button class="danger" style="font-size:12px; padding:6px 10px;" onclick="deleteMaster(' + m.id + ', \'' + esc(m.name).replace(/'/g,'') + '\')">Delete</button></td></tr>';
+    });
+    html += '</tbody></table></div>';
+    $('panel').innerHTML = html;
+  } catch (e) { $('panel').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
+}
+
+async function loadStats() {
+  $('panel').innerHTML = '<div class="loading">Loading stats…</div>';
+  try {
+    const masters = await api('/api/masters');
+    const total = masters.length;
+    const totalFollowers = masters.reduce((s,m) => s + (m.followers||0), 0);
+    const totalAum = masters.reduce((s,m) => s + (m.aum||0), 0);
+    const avgRoi = masters.length ? masters.reduce((s,m) => s + (m.roi_12m||0), 0) / masters.length : 0;
+    $('panel').innerHTML =
+      '<div class="grid">' +
+      '<div class="stat"><div class="lbl">Total Masters</div><div class="val">' + total + '</div></div>' +
+      '<div class="stat"><div class="lbl">Total Followers</div><div class="val">' + fmtInt(totalFollowers) + '</div></div>' +
+      '<div class="stat"><div class="lbl">Total AUM</div><div class="val">$' + fmtInt(Math.round(totalAum)) + '</div></div>' +
+      '<div class="stat"><div class="lbl">Avg ROI 12M</div><div class="val" style="color:var(--brand);">+' + fmt(avgRoi,1) + '%</div></div></div>';
+  } catch (e) { $('panel').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
+}
+
+window.openMasterModal = async (id = null) => {
+  let data = { name:'', country:'', style:'', bio:'', avatar:'', experience:0, roi_12m:0, drawdown:0, win_rate:0, sharpe:0, profit_factor:0, rating:4.5, aum:0, mt5_login:'', mt5_server:'', fee_split:70, status:'active' };
+  if (id) {
+    try { data = await api('/api/masters/' + id); } catch (e) { alert(e.message); return; }
+  }
+  const isEdit = !!id;
+  const div = document.createElement('div');
+  div.className = 'modal';
+  div.id = 'master-modal';
+  div.innerHTML =
+    '<div class="card"><h2>' + (isEdit ? 'Modifica master' : 'Nuovo master') + '</h2>' +
+    '<p class="muted">Master trader verificato.</p>' +
+    '<div class="row"><label><div class="lbl">Name *</div><input id="m-name" value="' + esc(data.name) + '"></label>' +
+    '<label><div class="lbl">Country</div><input id="m-country" value="' + esc(data.country||'') + '" placeholder="UK"></label></div>' +
+    '<label><div class="lbl">Style</div><input id="m-style" value="' + esc(data.style||'') + '" placeholder="EUR/USD Scalper"></label>' +
+    '<label><div class="lbl">Bio</div><textarea id="m-bio" rows="3">' + esc(data.bio||'') + '</textarea></label>' +
+    '<div class="row"><label><div class="lbl">Avatar (initials)</div><input id="m-avatar" value="' + esc(data.avatar||'') + '" placeholder="MH" maxlength="3"></label>' +
+    '<label><div class="lbl">Experience (years)</div><input id="m-exp" type="number" value="' + (data.experience||0) + '"></label></div>' +
+    '<div class="row"><label><div class="lbl">ROI 12M %</div><input id="m-roi" type="number" step="0.1" value="' + (data.roi_12m||0) + '"></label>' +
+    '<label><div class="lbl">Max DD %</div><input id="m-dd" type="number" step="0.1" value="' + (data.drawdown||0) + '"></label></div>' +
+    '<div class="row"><label><div class="lbl">Win Rate %</div><input id="m-win" type="number" step="0.1" value="' + (data.win_rate||0) + '"></label>' +
+    '<label><div class="lbl">Sharpe</div><input id="m-sharpe" type="number" step="0.01" value="' + (data.sharpe||0) + '"></label>' +
+    '<label><div class="lbl">Profit Factor</div><input id="m-pf" type="number" step="0.01" value="' + (data.profit_factor||0) + '"></label></div>' +
+    '<div class="row"><label><div class="lbl">Rating (1-5)</div><input id="m-rating" type="number" step="0.1" min="1" max="5" value="' + (data.rating||4.5) + '"></label>' +
+    '<label><div class="lbl">AUM $</div><input id="m-aum" type="number" value="' + (data.aum||0) + '"></label></div>' +
+    '<div class="row"><label><div class="lbl">MT5 Login</div><input id="m-login" value="' + esc(data.mt5_login||'') + '"></label>' +
+    '<label><div class="lbl">MT5 Server</div><input id="m-server" value="' + esc(data.mt5_server||'') + '"></label></div>' +
+    '<div class="row"><label><div class="lbl">Fee % (master gets)</div><input id="m-fee" type="number" min="0" max="100" value="' + (data.fee_split||70) + '"></label>' +
+    '<label><div class="lbl">Status</div><select id="m-status">' +
+    '<option value="active"' + (data.status==='active'?' selected':'') + '>active</option>' +
+    '<option value="paused"' + (data.status==='paused'?' selected':'') + '>paused</option>' +
+    '<option value="suspended"' + (data.status==='suspended'?' selected':'') + '>suspended</option>' +
+    '</select></label></div>' +
+    '<div class="err" id="modal-err"></div>' +
+    '<div class="actions"><button class="ghost" onclick="closeModal()">Annulla</button>' +
+    '<button onclick="saveMaster(' + (id || 'null') + ')">' + (isEdit ? 'Salva modifiche' : 'Crea master') + '</button></div></div>';
+  document.body.appendChild(div);
+};
+
+window.editMaster = (id) => openMasterModal(id);
+window.closeModal = () => { $('master-modal')?.remove(); };
+
+window.saveMaster = async (id) => {
+  const body = {
+    name: $('m-name').value, country: $('m-country').value, style: $('m-style').value,
+    bio: $('m-bio').value, avatar: $('m-avatar').value, experience: +$('m-exp').value,
+    roi_12m: +$('m-roi').value, drawdown: +$('m-dd').value, win_rate: +$('m-win').value,
+    sharpe: +$('m-sharpe').value, profit_factor: +$('m-pf').value, rating: +$('m-rating').value,
+    aum: +$('m-aum').value, mt5_login: $('m-login').value, mt5_server: $('m-server').value,
+    fee_split: +$('m-fee').value, status: $('m-status').value
+  };
+  if (!body.name) { $('modal-err').textContent = 'Name è obbligatorio'; return; }
+  try {
+    if (id) await api('/api/masters/' + id, { method:'PUT', body: JSON.stringify(body) });
+    else await api('/api/masters', { method:'POST', body: JSON.stringify(body) });
+    closeModal();
+    loadMasters();
+  } catch (e) { $('modal-err').textContent = e.message; }
+};
+
+window.deleteMaster = async (id, name) => {
+  if (!confirm('Eliminare master "' + name + '"?')) return;
+  try { await api('/api/masters/' + id, { method:'DELETE' }); loadMasters(); }
+  catch (e) { alert(e.message); }
+};
+
+function render() {
+  if (!TOKEN || !USER || USER.role !== 'admin') return renderLogin();
+  return renderDashboard();
+}
+
+render();
+</script>
+</body>
+</html>
