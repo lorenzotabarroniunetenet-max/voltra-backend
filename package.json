@@ -7,7 +7,6 @@
     "start": "node src/server.js",
     "db:push": "prisma db push",
     "db:seed": "node src/seed.js",
-    "db:studio": "prisma studio",
     "postinstall": "prisma generate"
   },
   "dependencies": {
