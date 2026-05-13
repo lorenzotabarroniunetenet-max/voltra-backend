@@ -10,7 +10,7 @@ let _api = null
 
 function getApi() {
   if (!TOKEN) return null
-  if (!_api) _api = new MetaApi(TOKEN, { region: 'new-york' })
+  if (!_api) _api = new MetaApi(TOKEN, { region: 'london' })
   return _api
 }
 

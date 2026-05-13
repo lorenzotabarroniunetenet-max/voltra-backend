@@ -1,0 +1,48 @@
+const API = import.meta.env.VITE_API_URL || ''
+
+function tk() { return localStorage.getItem('voltra_token') }
+function tkSet(t) { localStorage.setItem('voltra_token', t) }
+function tkClear() { localStorage.removeItem('voltra_token'); localStorage.removeItem('voltra_user') }
+
+async function req(p, o = {}) {
+  const h = { 'Content-Type': 'application/json' }
+  if (o.auth !== false && tk()) h.Authorization = `Bearer ${tk()}`
+  const r = await fetch(API + p, { method: o.method || 'GET', headers: h, body: o.body ? JSON.stringify(o.body) : undefined })
+  const d = await r.json().catch(() => ({}))
+  if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`)
+  return d
+}
+
+export const api = {
+  login: (email, password) => req('/api/auth/login', { method: 'POST', auth: false, body: { email, password } }).then(r => { tkSet(r.token); localStorage.setItem('voltra_user', JSON.stringify(r.user)); return r }),
+  register: (data) => req('/api/auth/register', { method: 'POST', auth: false, body: data }).then(r => { tkSet(r.token); localStorage.setItem('voltra_user', JSON.stringify(r.user)); return r }),
+  me: () => req('/api/auth/me'),
+  logout: () => tkClear(),
+
+  accounts: {
+    list: () => req('/api/accounts'),
+    get: (id) => req('/api/accounts/' + id),
+    create: (data) => req('/api/accounts', { method: 'POST', body: data }),
+    update: (id, data) => req('/api/accounts/' + id, { method: 'PATCH', body: data }),
+    remove: (id) => req('/api/accounts/' + id, { method: 'DELETE' })
+  },
+
+  rules: {
+    list: () => req('/api/rules'),
+    get: (id) => req('/api/rules/' + id),
+    create: (data) => req('/api/rules', { method: 'POST', body: data }),
+    update: (id, data) => req('/api/rules/' + id, { method: 'PATCH', body: data }),
+    remove: (id) => req('/api/rules/' + id, { method: 'DELETE' })
+  },
+
+  trades: {
+    list: (params = {}) => req('/api/trades?' + new URLSearchParams(params)),
+    stats: () => req('/api/trades/stats')
+  },
+
+  admin: {
+    users: () => req('/api/admin/users'),
+    updateUser: (id, data) => req('/api/admin/users/' + id, { method: 'PATCH', body: data }),
+    stats: () => req('/api/admin/stats')
+  }
+}

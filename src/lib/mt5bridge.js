@@ -6,7 +6,7 @@ const _connections = new Map()  // accountId -> connection
 
 function getApi() {
   if (!TOKEN) return null
-  if (!_api) _api = new MetaApi(TOKEN, { region: 'new-york' })
+  if (!_api) _api = new MetaApi(TOKEN, { region: 'london' })
   return _api
 }
 
@@ -27,7 +27,7 @@ export async function provisionAccount({ label, broker, server, login, password,
     application: 'MetaApi',
     magic: Math.floor(Math.random() * 1000000),
     quoteStreamingIntervalInSeconds: 2.5,
-    region: "new-york"
+    region: "london"
   })
 
   // Deploy + wait for connection (synchronously up to 2 min)
