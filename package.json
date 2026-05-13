@@ -1,6 +1,6 @@
 {
   "name": "voltra-backend",
-  "version": "0.1.0",
+  "version": "2.1.0",
   "type": "module",
   "scripts": {
     "dev": "node --watch src/server.js",
@@ -17,6 +17,7 @@
     "express": "^4.21.0",
     "express-rate-limit": "^7.4.0",
     "jsonwebtoken": "^9.0.2",
+    "metaapi.cloud-sdk": "^29.3.3",
     "zod": "^3.23.8"
   },
   "devDependencies": {
