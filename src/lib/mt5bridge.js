@@ -26,7 +26,8 @@ export async function provisionAccount({ label, broker, server, login, password,
     platform: platform.toLowerCase(),
     application: 'MetaApi',
     magic: Math.floor(Math.random() * 1000000),
-    quoteStreamingIntervalInSeconds: 2.5
+    quoteStreamingIntervalInSeconds: 2.5,
+    region: "new-york"
   })
 
   // Deploy + wait for connection (synchronously up to 2 min)
