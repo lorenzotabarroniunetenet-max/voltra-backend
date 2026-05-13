@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role { USER ADMIN }
+enum MasterStatus { ACTIVE PAUSED SUSPENDED }
+enum CopyStatus { ACTIVE PAUSED STOPPED }
+enum TradeSide { BUY SELL }
+enum TradeStatus { OPEN CLOSED }
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  passwordHash  String
+  name          String
+  role          Role           @default(USER)
+  createdAt     DateTime       @default(now())
+  mt5Accounts   Mt5Account[]
+  copyRelations CopyRelation[]
+}
+
+model Mt5Account {
+  id            String         @id @default(cuid())
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label         String
+  broker        String
+  server        String
+  login         String
+  passwordEnc   String
+  balance       Float          @default(0)
+  equity        Float          @default(0)
+  currency      String         @default("USD")
+  leverage      Int            @default(100)
+  active        Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  copyRelations CopyRelation[]
+
+  @@unique([userId, login, server])
+}
+
+model Master {
+  id             String         @id @default(cuid())
+  name           String
+  country        String?
+  style          String?
+  bio            String?
+  mt5Login       String         @unique
+  mt5Server      String
+  feeSplit       Float          @default(0.30)
+  status         MasterStatus   @default(ACTIVE)
+  roi12m         Float          @default(0)
+  drawdown       Float          @default(0)
+  winRate        Float          @default(0)
+  sharpe         Float          @default(0)
+  profitFactor   Float          @default(0)
+  followersCount Int            @default(0)
+  aum            Float          @default(0)
+  rating         Float          @default(0)
+  experience     Int            @default(0)
+  createdAt      DateTime       @default(now())
+  copyRelations  CopyRelation[]
+  trades         Trade[]
+  equityPoints   EquityPoint[]
+}
+
+model CopyRelation {
+  id           String      @id @default(cuid())
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  masterId     String
+  master       Master      @relation(fields: [masterId], references: [id])
+  mt5AccountId String
+  mt5Account   Mt5Account  @relation(fields: [mt5AccountId], references: [id])
+  lotRatio     Float       @default(1.0)
+  maxDrawdown  Float       @default(10.0)
+  status       CopyStatus  @default(ACTIVE)
+  createdAt    DateTime    @default(now())
+
+  @@unique([userId, masterId, mt5AccountId])
+}
+
+model Trade {
+  id         String      @id @default(cuid())
+  masterId   String
+  master     Master      @relation(fields: [masterId], references: [id])
+  symbol     String
+  side       TradeSide
+  lots       Float
+  openPrice  Float
+  closePrice Float?
+  pnl        Float       @default(0)
+  status     TradeStatus @default(OPEN)
+  openedAt   DateTime
+  closedAt   DateTime?
+}
+
+model EquityPoint {
+  id       String   @id @default(cuid())
+  masterId String
+  master   Master   @relation(fields: [masterId], references: [id])
+  date     DateTime
+  equity   Float
+
+  @@unique([masterId, date])
+}
