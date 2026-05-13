@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma.js'
 import { applyCopyRule, openTrade, closePosition, getAccountInfo, isMetaApiEnabled } from '../lib/mt5bridge.js'
-import MetaApi from 'metaapi.cloud-sdk'
+import MetaApi from 'metaapi.cloud-sdk/esm-node'
 
 const TOKEN = process.env.METAAPI_TOKEN
 

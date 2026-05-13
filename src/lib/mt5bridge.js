@@ -1,4 +1,4 @@
-import MetaApi from 'metaapi.cloud-sdk'
+import MetaApi from 'metaapi.cloud-sdk/esm-node'
 
 const TOKEN = process.env.METAAPI_TOKEN
 let _api = null
