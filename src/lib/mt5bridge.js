@@ -41,8 +41,10 @@ export async function getAccountInfo(metaapiAccountId) {
   if (!api) throw new Error('METAAPI_TOKEN not configured')
   const account = await api.metatraderAccountApi.getAccount(metaapiAccountId)
   if (account.state !== 'DEPLOYED') return { state: account.state, balance: 0, equity: 0 }
-  const connection = await _getConnection(account)
-  const info = connection.terminalState.accountInformation
+  const connection = account.getRPCConnection()
+  await connection.connect()
+  await connection.waitSynchronized()
+  const info = await connection.getAccountInformation()
   return {
     state: account.state,
     balance: info?.balance || 0,
