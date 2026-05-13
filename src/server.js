@@ -2,6 +2,8 @@ import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import rateLimit from 'express-rate-limit'
+import { fileURLToPath } from 'url'
+import { dirname, join } from 'path'
 import authRoutes from './routes/auth.js'
 import mastersRoutes from './routes/masters.js'
 import mt5Routes from './routes/mt5.js'
@@ -9,7 +11,9 @@ import copyRoutes from './routes/copy.js'
 import tradesRoutes from './routes/trades.js'
 import adminRoutes from './routes/admin.js'
 
+const __dirname = dirname(fileURLToPath(import.meta.url))
 const app = express()
+app.use(express.static(join(__dirname, '../public')))
 const allowed = (process.env.ALLOWED_ORIGINS||'').split(',').map(s=>s.trim()).filter(Boolean)
 app.use(cors({ origin: (o,cb) => (!o||!allowed.length||allowed.includes(o)) ? cb(null,true) : cb(new Error('CORS')), credentials: true }))
 app.use(express.json({ limit:'1mb' }))
