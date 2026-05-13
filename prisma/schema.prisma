@@ -8,95 +8,104 @@ datasource db {
 }
 
 enum Role { USER ADMIN }
-enum AccountType { MASTER SLAVE }
-enum AccountStatus { ACTIVE PAUSED DISCONNECTED PROVISIONING }
-enum RuleStatus { ACTIVE PAUSED }
-enum LotMode { MULTIPLIER FIXED PROPORTIONAL }
-enum OverrideMode { COPY OVERRIDE DISABLED }
+enum MasterStatus { ACTIVE PAUSED SUSPENDED }
+enum CopyStatus { ACTIVE PAUSED STOPPED }
 enum TradeSide { BUY SELL }
-enum TradeStatus { OPEN CLOSED ERROR }
+enum TradeStatus { OPEN CLOSED }
 
 model User {
-  id            String       @id @default(cuid())
-  email         String       @unique
+  id            String         @id @default(cuid())
+  email         String         @unique
   passwordHash  String
   name          String
-  role          Role         @default(USER)
-  plan          String       @default("FREE")
-  createdAt     DateTime     @default(now())
-  accounts      Mt5Account[]
-  rules         CopyRule[]
+  role          Role           @default(USER)
+  createdAt     DateTime       @default(now())
+  mt5Accounts   Mt5Account[]
+  copyRelations CopyRelation[]
 }
 
 model Mt5Account {
-  id               String        @id @default(cuid())
-  userId           String
-  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  label            String
-  type             AccountType
-  broker           String
-  server           String
-  login            String
-  passwordEnc      String
-  platform         String        @default("MT5")
-  metaapiAccountId String?
-  metaapiState     String?
-  balance          Float         @default(0)
-  equity           Float         @default(0)
-  currency         String        @default("USD")
-  leverage         Int           @default(100)
-  status           AccountStatus @default(PROVISIONING)
-  lastSync         DateTime?
-  createdAt        DateTime      @default(now())
-  rulesAsMaster    CopyRule[]    @relation("MasterRules")
-  rulesAsSlave     CopyRule[]    @relation("SlaveRules")
+  id            String         @id @default(cuid())
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label         String
+  broker        String
+  server        String
+  login         String
+  passwordEnc   String
+  balance       Float          @default(0)
+  equity        Float          @default(0)
+  currency      String         @default("USD")
+  leverage      Int            @default(100)
+  active        Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  copyRelations CopyRelation[]
 
   @@unique([userId, login, server])
 }
 
-model CopyRule {
-  id              String       @id @default(cuid())
-  userId          String
-  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  masterAccountId String
-  master          Mt5Account   @relation("MasterRules", fields: [masterAccountId], references: [id], onDelete: Cascade)
-  slaveAccountId  String
-  slave           Mt5Account   @relation("SlaveRules", fields: [slaveAccountId], references: [id], onDelete: Cascade)
-  label           String
-  reverse         Boolean      @default(false)
-  lotMode         LotMode      @default(MULTIPLIER)
-  lotValue        Float        @default(1.0)
-  tpMode          OverrideMode @default(COPY)
-  tpValue         Float        @default(0)
-  slMode          OverrideMode @default(COPY)
-  slValue         Float        @default(0)
-  symbolWhitelist String?
-  symbolBlacklist String?
-  maxDrawdown     Float        @default(0)
-  maxSlippage     Float        @default(3)
-  status          RuleStatus   @default(ACTIVE)
-  createdAt       DateTime     @default(now())
-  trades          Trade[]
+model Master {
+  id             String         @id @default(cuid())
+  name           String
+  country        String?
+  style          String?
+  bio            String?
+  mt5Login       String         @unique
+  mt5Server      String
+  feeSplit       Float          @default(0.30)
+  status         MasterStatus   @default(ACTIVE)
+  roi12m         Float          @default(0)
+  drawdown       Float          @default(0)
+  winRate        Float          @default(0)
+  sharpe         Float          @default(0)
+  profitFactor   Float          @default(0)
+  followersCount Int            @default(0)
+  aum            Float          @default(0)
+  rating         Float          @default(0)
+  experience     Int            @default(0)
+  createdAt      DateTime       @default(now())
+  copyRelations  CopyRelation[]
+  trades         Trade[]
+  equityPoints   EquityPoint[]
+}
 
-  @@unique([masterAccountId, slaveAccountId])
+model CopyRelation {
+  id           String      @id @default(cuid())
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  masterId     String
+  master       Master      @relation(fields: [masterId], references: [id])
+  mt5AccountId String
+  mt5Account   Mt5Account  @relation(fields: [mt5AccountId], references: [id])
+  lotRatio     Float       @default(1.0)
+  maxDrawdown  Float       @default(10.0)
+  status       CopyStatus  @default(ACTIVE)
+  createdAt    DateTime    @default(now())
+
+  @@unique([userId, masterId, mt5AccountId])
 }
 
 model Trade {
-  id             String      @id @default(cuid())
-  ruleId         String
-  rule           CopyRule    @relation(fields: [ruleId], references: [id], onDelete: Cascade)
-  symbol         String
-  side           TradeSide
-  lots           Float
-  openPrice      Float
-  closePrice     Float?
-  tp             Float?
-  sl             Float?
-  pnl            Float       @default(0)
-  status         TradeStatus @default(OPEN)
-  masterTicket   String?
-  slaveTicket    String?
-  errorMessage   String?
-  openedAt       DateTime    @default(now())
-  closedAt       DateTime?
+  id         String      @id @default(cuid())
+  masterId   String
+  master     Master      @relation(fields: [masterId], references: [id])
+  symbol     String
+  side       TradeSide
+  lots       Float
+  openPrice  Float
+  closePrice Float?
+  pnl        Float       @default(0)
+  status     TradeStatus @default(OPEN)
+  openedAt   DateTime
+  closedAt   DateTime?
+}
+
+model EquityPoint {
+  id       String   @id @default(cuid())
+  masterId String
+  master   Master   @relation(fields: [masterId], references: [id])
+  date     DateTime
+  equity   Float
+
+  @@unique([masterId, date])
 }
