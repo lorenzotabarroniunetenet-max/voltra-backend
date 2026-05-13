@@ -1,265 +1,36 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Voltra Admin</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
-  :root { --bg:#0A0A0B; --surface:#13131A; --border:#1F1F2A; --fg:#F5F5F7; --muted:#8B8B96; --brand:#B4FF39; --danger:#FF3D71; }
-  * { box-sizing: border-box; margin:0; padding:0; }
-  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--fg); min-height:100vh; }
-  .num { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
-  .login { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:16px; }
-  .card { background: var(--surface); border:1px solid var(--border); border-radius:14px; padding:24px; }
-  .login .card { width: 100%; max-width: 400px; }
-  h1 { font-size:24px; margin-bottom:8px; }
-  h2 { font-size:20px; margin-bottom:6px; }
-  .muted { color: var(--muted); font-size:14px; margin-bottom:24px; }
-  label { display:block; margin-bottom:16px; }
-  label .lbl { font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); margin-bottom:6px; display:block; }
-  input, select, textarea { width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 12px; color:var(--fg); font-family:inherit; font-size:14px; outline:none; }
-  input:focus, select:focus, textarea:focus { border-color: var(--brand); }
-  button { background: var(--brand); color: var(--bg); border:none; border-radius:8px; padding:10px 20px; font-weight:600; cursor:pointer; font-size:14px; }
-  button:hover { background:#8FCC2E; }
-  button.ghost { background:transparent; color:var(--muted); border:1px solid var(--border); }
-  button.ghost:hover { color:var(--fg); }
-  button.danger { background:transparent; color:var(--danger); border:1px solid var(--danger); }
-  .topbar { display:flex; justify-content:space-between; align-items:center; padding:16px 24px; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:10; background:rgba(10,10,11,0.92); backdrop-filter:blur(10px); }
-  .logo { display:flex; align-items:center; gap:10px; }
-  .logo svg { width:28px; height:28px; }
-  .logo .name { font-family:'JetBrains Mono',monospace; letter-spacing:0.15em; font-weight:600; }
-  .logo .tag { background:var(--brand); color:var(--bg); font-size:10px; padding:2px 6px; border-radius:4px; margin-left:6px; font-family:'JetBrains Mono',monospace; }
-  .content { padding:24px; max-width:1400px; margin:0 auto; }
-  .toolbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:16px; }
-  table { width:100%; border-collapse: collapse; }
-  th { text-align:left; padding:12px 16px; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); border-bottom:1px solid var(--border); font-weight:500; }
-  td { padding:14px 16px; border-bottom:1px solid var(--border); font-size:14px; }
-  tr:hover td { background: rgba(180,255,57,0.03); }
-  .pill { display:inline-block; padding:3px 8px; border-radius:5px; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.05em; }
-  .pill.active { background:rgba(180,255,57,0.1); color:var(--brand); }
-  .pill.paused { background:rgba(255,178,61,0.1); color:#FFB23D; }
-  .pill.suspended { background:rgba(255,61,113,0.1); color:var(--danger); }
-  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:24px; }
-  .stat { background: var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px; }
-  .stat .lbl { font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); margin-bottom:8px; }
-  .stat .val { font-family:'JetBrains Mono',monospace; font-size:24px; font-weight:600; }
-  .modal { position:fixed; inset:0; background:rgba(10,10,11,0.85); backdrop-filter:blur(8px); display:flex; align-items:center; justify-content:center; z-index:100; padding:16px; }
-  .modal .card { max-width:580px; width:100%; max-height:90vh; overflow-y:auto; }
-  .row { display:flex; gap:12px; }
-  .row label { flex:1; }
-  .actions { display:flex; gap:8px; margin-top:20px; }
-  .err { color:var(--danger); font-size:13px; margin:8px 0; min-height:18px; }
-  .endpoint-info { background: rgba(180,255,57,0.05); border:1px solid rgba(180,255,57,0.2); border-radius:8px; padding:10px 12px; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted); margin-bottom:16px; word-break:break-all; }
-  .endpoint-info code { color:var(--brand); }
-  .loading { text-align:center; padding:40px; color:var(--muted); }
-</style>
-</head>
-<body>
-<div id="app"></div>
-<script>
-const LOGO = '<svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="7" fill="#13131A" stroke="#1F1F2A"/><path d="M18 5 L9 17.5 H13.8 L13 27 L23 13 H17.2 L18 5 Z" fill="#B4FF39"/></svg>';
-
-let API = localStorage.getItem('voltra_api') || 'http://localhost:4000';
-let TOKEN = localStorage.getItem('voltra_admin_token') || null;
-let USER = JSON.parse(localStorage.getItem('voltra_admin_user') || 'null');
-
-const $ = (id) => document.getElementById(id);
-const fmt = (n, d=2) => n != null ? Number(n).toLocaleString('en-US', { minimumFractionDigits:d, maximumFractionDigits:d }) : '—';
-const fmtInt = (n) => n != null ? Number(n).toLocaleString('en-US') : '—';
-const esc = (s) => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-
-async function api(path, opts={}) {
-  const headers = { 'Content-Type':'application/json', ...(opts.headers || {}) };
-  if (TOKEN) headers.Authorization = 'Bearer ' + TOKEN;
-  const r = await fetch(API + path, { ...opts, headers });
-  const data = await r.json().catch(() => ({ error: 'Network error' }));
-  if (!r.ok) throw new Error(data.error || 'Error ' + r.status);
-  return data;
-}
-
-function logout() {
-  TOKEN = null; USER = null;
-  localStorage.removeItem('voltra_admin_token');
-  localStorage.removeItem('voltra_admin_user');
-  render();
-}
-
-function setAuth(token, user) {
-  TOKEN = token; USER = user;
-  localStorage.setItem('voltra_admin_token', token);
-  localStorage.setItem('voltra_admin_user', JSON.stringify(user));
-}
-
-function renderLogin() {
-  $('app').innerHTML =
-    '<div class="login"><div style="width:100%; max-width:400px;">' +
-    '<div style="display:flex; align-items:center; gap:10px; justify-content:center; margin-bottom:24px;">' +
-    LOGO + '<span style="font-family:\'JetBrains Mono\',monospace; letter-spacing:0.18em; font-weight:600; font-size:18px;">VOLTRA</span>' +
-    '<span class="pill active" style="font-size:11px;">ADMIN</span></div>' +
-    '<div class="card"><h1>Admin login</h1><p class="muted">Solo admin: gestisci master e clienti.</p>' +
-    '<div class="endpoint-info">API: <code>' + esc(API) + '</code> <button class="ghost" style="padding:4px 10px; font-size:11px; margin-left:8px;" onclick="changeApi()">Cambia</button></div>' +
-    '<label><div class="lbl">Email</div><input type="email" id="email" value="admin@voltrasolutions.com"></label>' +
-    '<label><div class="lbl">Password</div><input type="password" id="password" value="admin1234"></label>' +
-    '<div class="err" id="login-err"></div>' +
-    '<button onclick="doLogin()" style="width:100%; padding:12px;">Login</button></div></div></div>';
-}
-
-window.changeApi = () => {
-  const v = prompt('URL backend (es: https://voltra-backend.onrender.com)', API);
-  if (v) { API = v.replace(/\/$/, ''); localStorage.setItem('voltra_api', API); render(); }
-};
-
-window.doLogin = async () => {
-  try {
-    const { token, user } = await api('/api/auth/login', { method:'POST', body: JSON.stringify({ email: $('email').value, password: $('password').value }) });
-    if (user.role !== 'admin') { $('login-err').textContent = 'Account non admin'; return; }
-    setAuth(token, user); render();
-  } catch (e) { $('login-err').textContent = e.message; }
-};
-
-async function renderDashboard() {
-  $('app').innerHTML =
-    '<div class="topbar"><div class="logo">' + LOGO + '<span class="name">VOLTRA<span class="tag">ADMIN</span></span></div>' +
-    '<div style="display:flex; gap:16px; align-items:center; font-size:14px;">' +
-    '<span style="color:var(--muted);">' + esc(USER.name) + '</span>' +
-    '<button class="ghost" onclick="logout()">Logout</button></div></div>' +
-    '<div class="content"><div class="toolbar">' +
-    '<div style="display:flex; gap:8px;">' +
-    '<button onclick="showTab(\'masters\')" id="tab-masters">Masters</button>' +
-    '<button onclick="showTab(\'stats\')" id="tab-stats" class="ghost">Stats</button>' +
-    '</div><button onclick="openMasterModal()">+ Aggiungi Master</button></div>' +
-    '<div id="panel"></div></div>';
-  showTab('masters');
-}
-
-window.showTab = (tab) => {
-  document.querySelectorAll('[id^=tab-]').forEach(b => b.classList.add('ghost'));
-  const active = $('tab-' + tab);
-  if (active) active.classList.remove('ghost');
-  if (tab === 'masters') return loadMasters();
-  if (tab === 'stats') return loadStats();
-};
-
-async function loadMasters() {
-  $('panel').innerHTML = '<div class="loading">Loading masters…</div>';
-  try {
-    const masters = await api('/api/masters');
-    if (masters.length === 0) {
-      $('panel').innerHTML = '<div class="card" style="text-align:center; padding:40px;"><p class="muted" style="margin-bottom:16px;">Nessun master ancora. Aggiungi il primo.</p><button onclick="openMasterModal()">+ Aggiungi Master</button></div>';
-      return;
-    }
-    let html = '<div class="card" style="padding:0; overflow-x:auto;"><table><thead><tr>' +
-      '<th>Name</th><th>Style</th><th>ROI 12M</th><th>Max DD</th><th>Win</th><th>Sharpe</th><th>Followers</th><th>Fee</th><th>Status</th><th></th></tr></thead><tbody>';
-    masters.forEach(m => {
-      html += '<tr>' +
-        '<td><strong>' + esc(m.name) + '</strong><div style="font-size:11px; color:var(--muted);">' + esc(m.country||'') + ' · ' + (m.experience||0) + 'y</div></td>' +
-        '<td style="color:var(--muted);">' + esc(m.style||'—') + '</td>' +
-        '<td class="num" style="color:var(--brand);">+' + fmt(m.roi_12m,1) + '%</td>' +
-        '<td class="num" style="color:var(--danger);">-' + fmt(m.drawdown,1) + '%</td>' +
-        '<td class="num">' + fmt(m.win_rate,1) + '%</td>' +
-        '<td class="num">' + fmt(m.sharpe,2) + '</td>' +
-        '<td class="num">' + fmtInt(m.followers) + '</td>' +
-        '<td class="num">' + fmt(m.fee_split,0) + '%</td>' +
-        '<td><span class="pill ' + esc(m.status) + '">' + esc(m.status) + '</span></td>' +
-        '<td style="text-align:right; white-space:nowrap;">' +
-        '<button class="ghost" style="font-size:12px; padding:6px 10px;" onclick="editMaster(' + m.id + ')">Edit</button> ' +
-        '<button class="danger" style="font-size:12px; padding:6px 10px;" onclick="deleteMaster(' + m.id + ', \'' + esc(m.name).replace(/'/g,'') + '\')">Delete</button></td></tr>';
-    });
-    html += '</tbody></table></div>';
-    $('panel').innerHTML = html;
-  } catch (e) { $('panel').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
-}
-
-async function loadStats() {
-  $('panel').innerHTML = '<div class="loading">Loading stats…</div>';
-  try {
-    const masters = await api('/api/masters');
-    const total = masters.length;
-    const totalFollowers = masters.reduce((s,m) => s + (m.followers||0), 0);
-    const totalAum = masters.reduce((s,m) => s + (m.aum||0), 0);
-    const avgRoi = masters.length ? masters.reduce((s,m) => s + (m.roi_12m||0), 0) / masters.length : 0;
-    $('panel').innerHTML =
-      '<div class="grid">' +
-      '<div class="stat"><div class="lbl">Total Masters</div><div class="val">' + total + '</div></div>' +
-      '<div class="stat"><div class="lbl">Total Followers</div><div class="val">' + fmtInt(totalFollowers) + '</div></div>' +
-      '<div class="stat"><div class="lbl">Total AUM</div><div class="val">$' + fmtInt(Math.round(totalAum)) + '</div></div>' +
-      '<div class="stat"><div class="lbl">Avg ROI 12M</div><div class="val" style="color:var(--brand);">+' + fmt(avgRoi,1) + '%</div></div></div>';
-  } catch (e) { $('panel').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
-}
-
-window.openMasterModal = async (id = null) => {
-  let data = { name:'', country:'', style:'', bio:'', avatar:'', experience:0, roi_12m:0, drawdown:0, win_rate:0, sharpe:0, profit_factor:0, rating:4.5, aum:0, mt5_login:'', mt5_server:'', fee_split:70, status:'active' };
-  if (id) {
-    try { data = await api('/api/masters/' + id); } catch (e) { alert(e.message); return; }
-  }
-  const isEdit = !!id;
-  const div = document.createElement('div');
-  div.className = 'modal';
-  div.id = 'master-modal';
-  div.innerHTML =
-    '<div class="card"><h2>' + (isEdit ? 'Modifica master' : 'Nuovo master') + '</h2>' +
-    '<p class="muted">Master trader verificato.</p>' +
-    '<div class="row"><label><div class="lbl">Name *</div><input id="m-name" value="' + esc(data.name) + '"></label>' +
-    '<label><div class="lbl">Country</div><input id="m-country" value="' + esc(data.country||'') + '" placeholder="UK"></label></div>' +
-    '<label><div class="lbl">Style</div><input id="m-style" value="' + esc(data.style||'') + '" placeholder="EUR/USD Scalper"></label>' +
-    '<label><div class="lbl">Bio</div><textarea id="m-bio" rows="3">' + esc(data.bio||'') + '</textarea></label>' +
-    '<div class="row"><label><div class="lbl">Avatar (initials)</div><input id="m-avatar" value="' + esc(data.avatar||'') + '" placeholder="MH" maxlength="3"></label>' +
-    '<label><div class="lbl">Experience (years)</div><input id="m-exp" type="number" value="' + (data.experience||0) + '"></label></div>' +
-    '<div class="row"><label><div class="lbl">ROI 12M %</div><input id="m-roi" type="number" step="0.1" value="' + (data.roi_12m||0) + '"></label>' +
-    '<label><div class="lbl">Max DD %</div><input id="m-dd" type="number" step="0.1" value="' + (data.drawdown||0) + '"></label></div>' +
-    '<div class="row"><label><div class="lbl">Win Rate %</div><input id="m-win" type="number" step="0.1" value="' + (data.win_rate||0) + '"></label>' +
-    '<label><div class="lbl">Sharpe</div><input id="m-sharpe" type="number" step="0.01" value="' + (data.sharpe||0) + '"></label>' +
-    '<label><div class="lbl">Profit Factor</div><input id="m-pf" type="number" step="0.01" value="' + (data.profit_factor||0) + '"></label></div>' +
-    '<div class="row"><label><div class="lbl">Rating (1-5)</div><input id="m-rating" type="number" step="0.1" min="1" max="5" value="' + (data.rating||4.5) + '"></label>' +
-    '<label><div class="lbl">AUM $</div><input id="m-aum" type="number" value="' + (data.aum||0) + '"></label></div>' +
-    '<div class="row"><label><div class="lbl">MT5 Login</div><input id="m-login" value="' + esc(data.mt5_login||'') + '"></label>' +
-    '<label><div class="lbl">MT5 Server</div><input id="m-server" value="' + esc(data.mt5_server||'') + '"></label></div>' +
-    '<div class="row"><label><div class="lbl">Fee % (master gets)</div><input id="m-fee" type="number" min="0" max="100" value="' + (data.fee_split||70) + '"></label>' +
-    '<label><div class="lbl">Status</div><select id="m-status">' +
-    '<option value="active"' + (data.status==='active'?' selected':'') + '>active</option>' +
-    '<option value="paused"' + (data.status==='paused'?' selected':'') + '>paused</option>' +
-    '<option value="suspended"' + (data.status==='suspended'?' selected':'') + '>suspended</option>' +
-    '</select></label></div>' +
-    '<div class="err" id="modal-err"></div>' +
-    '<div class="actions"><button class="ghost" onclick="closeModal()">Annulla</button>' +
-    '<button onclick="saveMaster(' + (id || 'null') + ')">' + (isEdit ? 'Salva modifiche' : 'Crea master') + '</button></div></div>';
-  document.body.appendChild(div);
-};
-
-window.editMaster = (id) => openMasterModal(id);
-window.closeModal = () => { $('master-modal')?.remove(); };
-
-window.saveMaster = async (id) => {
-  const body = {
-    name: $('m-name').value, country: $('m-country').value, style: $('m-style').value,
-    bio: $('m-bio').value, avatar: $('m-avatar').value, experience: +$('m-exp').value,
-    roi_12m: +$('m-roi').value, drawdown: +$('m-dd').value, win_rate: +$('m-win').value,
-    sharpe: +$('m-sharpe').value, profit_factor: +$('m-pf').value, rating: +$('m-rating').value,
-    aum: +$('m-aum').value, mt5_login: $('m-login').value, mt5_server: $('m-server').value,
-    fee_split: +$('m-fee').value, status: $('m-status').value
-  };
-  if (!body.name) { $('modal-err').textContent = 'Name è obbligatorio'; return; }
-  try {
-    if (id) await api('/api/masters/' + id, { method:'PUT', body: JSON.stringify(body) });
-    else await api('/api/masters', { method:'POST', body: JSON.stringify(body) });
-    closeModal();
-    loadMasters();
-  } catch (e) { $('modal-err').textContent = e.message; }
-};
-
-window.deleteMaster = async (id, name) => {
-  if (!confirm('Eliminare master "' + name + '"?')) return;
-  try { await api('/api/masters/' + id, { method:'DELETE' }); loadMasters(); }
-  catch (e) { alert(e.message); }
-};
-
-function render() {
-  if (!TOKEN || !USER || USER.role !== 'admin') return renderLogin();
-  return renderDashboard();
-}
-
+<!doctype html><html lang="en"><head><meta charset="utf-8"/><title>Voltra Admin</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#0A0A0B;color:#F5F6FA;font-family:-apple-system,sans-serif;font-size:14px}.mono{font-family:monospace}a{color:#B4FF39}.wrap{max-width:1100px;margin:0 auto;padding:24px}.hdr{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #2A2A35;padding-bottom:16px;margin-bottom:24px}.logo{font-family:monospace;font-weight:700;letter-spacing:.18em;color:#B4FF39;font-size:18px}.card{background:#13131A;border:1px solid #2A2A35;border-radius:10px;padding:20px;margin-bottom:16px}.input,.select{width:100%;background:#0A0A0B;border:1px solid #2A2A35;color:#F5F6FA;border-radius:8px;padding:9px 12px;font-size:14px;outline:none;font-family:inherit}.input:focus,.select:focus{border-color:#B4FF39}.lbl{font-size:11px;font-family:monospace;text-transform:uppercase;letter-spacing:.1em;color:#8B8C96;margin-bottom:5px;display:block}.btn{display:inline-flex;align-items:center;justify-content:center;padding:9px 16px;border-radius:8px;border:none;cursor:pointer;font-size:14px;font-weight:600;font-family:inherit}.btn.p{background:#B4FF39;color:#0A0A0B}.btn.p:hover{background:#a5ef2b}.btn.g{background:transparent;border:1px solid #2A2A35;color:#8B8C96}.btn.g:hover{color:#F5F6FA}.btn.d{background:transparent;color:#FF3D71;padding:4px 8px;font-size:12px}.btn.l{background:transparent;color:#B4FF39;padding:4px 8px;font-size:12px}table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;padding:10px 12px;font-size:10px;font-family:monospace;text-transform:uppercase;letter-spacing:.1em;color:#8B8C96;border-bottom:1px solid #2A2A35}td{padding:10px 12px;border-bottom:1px solid rgba(42,42,53,.5)}.badge{font-size:10px;font-family:monospace;text-transform:uppercase;padding:2px 7px;border-radius:4px}.ba{background:rgba(180,255,57,.1);color:#B4FF39}.bp{background:rgba(255,178,61,.1);color:#FFB23D}.bs{background:rgba(255,61,113,.1);color:#FF3D71}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}.sv{font-family:monospace;font-size:26px;font-weight:700;margin-top:4px}.tabs{display:flex;gap:4px;border-bottom:1px solid #2A2A35;margin-bottom:20px}.tab{padding:9px 14px;background:none;border:none;color:#8B8C96;cursor:pointer;font-size:14px;font-weight:600;font-family:inherit;position:relative}.tab.a{color:#B4FF39}.tab.a::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;background:#B4FF39}.modal{position:fixed;inset:0;background:rgba(10,10,11,.85);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;z-index:50}.mbox{background:#13131A;border:1px solid #2A2A35;border-radius:10px;padding:24px;max-width:680px;width:100%;margin:auto}.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}.err{color:#FF3D71;font-size:13px;margin-top:8px}.num{font-family:monospace}.tr{text-align:right}.login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}.lcard{max-width:400px;width:100%}</style></head>
+<body><div id="app"></div><script>
+const D=localStorage.getItem('voltra_api')||'http://localhost:4000';
+let API=D,token=localStorage.getItem('voltra_token'),user=JSON.parse(localStorage.getItem('voltra_user')||'null'),tab='masters',editing=null,creating=false;
+async function req(p,o={}){const h={'Content-Type':'application/json'};if(token&&o.auth!==false)h.Authorization='Bearer '+token;const r=await fetch(API+p,{method:o.method||'GET',headers:h,body:o.body?JSON.stringify(o.body):undefined});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'HTTP '+r.status);return d;}
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function toast(m,k='ok'){const e=document.createElement('div');e.style='position:fixed;bottom:20px;right:20px;background:#13131A;border:1px solid '+(k==='ok'?'#B4FF39':'#FF3D71')+';color:'+(k==='ok'?'#B4FF39':'#FF3D71')+';padding:10px 16px;border-radius:8px;font-size:13px;z-index:100';e.textContent=m;document.body.appendChild(e);setTimeout(()=>e.remove(),3000);}
+function setSession(t,u){token=t;user=u;localStorage.setItem('voltra_token',t);localStorage.setItem('voltra_user',JSON.stringify(u));}
+function logout(){token=null;user=null;localStorage.removeItem('voltra_token');localStorage.removeItem('voltra_user');render();}
+function renderLogin(){document.getElementById('app').innerHTML=`<div class="login"><div class="lcard card"><div class="logo">VOLTRA · ADMIN</div><p style="color:#8B8C96;font-size:13px;margin:8px 0 16px">API: <span class="mono">${esc(API)}</span> <a href="#" id="cu">change</a></p><div style="margin-bottom:10px"><div class="lbl">Email</div><input id="em" class="input" value="admin@voltrasolutions.com"/></div><div style="margin-bottom:10px"><div class="lbl">Password</div><input id="pw" type="password" class="input" value="admin1234"/></div><button id="lb" class="btn p" style="width:100%;padding:11px;margin-top:6px">Login</button><div id="le" class="err"></div></div></div>`;
+document.getElementById('lb').onclick=async()=>{try{const d=await req('/api/auth/login',{method:'POST',auth:false,body:{email:document.getElementById('em').value,password:document.getElementById('pw').value}});if(d.user.role!=='ADMIN'){document.getElementById('le').textContent='Not admin';return;}setSession(d.token,d.user);render();}catch(e){document.getElementById('le').textContent=e.message;}};
+document.getElementById('cu').onclick=e=>{e.preventDefault();const u=prompt('API URL:',API);if(u){API=u.replace(/\/$/,'');localStorage.setItem('voltra_api',API);renderLogin();}};}
+function shell(c){document.getElementById('app').innerHTML=`<div class="wrap"><div class="hdr"><div><div class="logo">VOLTRA · ADMIN</div><div style="color:#8B8C96;font-size:12px;margin-top:4px">${esc(user?.email)} · ${esc(API)}</div></div><button class="btn g" id="lo">Logout</button></div><div id="sr"></div><div class="tabs"><button class="tab ${tab==='masters'?'a':''}" data-t="masters">Masters</button><button class="tab ${tab==='users'?'a':''}" data-t="users">Users</button><button class="tab ${tab==='trades'?'a':''}" data-t="trades">Trades</button></div><div id="tc">${c}</div></div>`;
+document.getElementById('lo').onclick=logout;document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{tab=b.dataset.t;render();});loadStats();}
+async function loadStats(){try{const s=await req('/api/admin/stats');document.getElementById('sr').innerHTML=`<div class="stats"><div class="card"><div class="lbl">Users</div><div class="sv">${s.users}</div></div><div class="card"><div class="lbl">Active Masters</div><div class="sv">${s.activeMasters}</div></div><div class="card"><div class="lbl">Active Copies</div><div class="sv">${s.activeCopies}</div></div><div class="card"><div class="lbl">Platform P&L (30%)</div><div class="sv" style="color:#B4FF39">$${(s.totalPnl*.3).toFixed(2)}</div></div></div>`;}catch{}}
+async function renderMasters(){shell('<div style="color:#8B8C96">Loading…</div>');let ml=[];try{ml=await req('/api/admin/masters');}catch(e){document.getElementById('tc').innerHTML=`<div class="err">${esc(e.message)}</div>`;return;}
+const rows=ml.map(m=>`<tr><td style="font-weight:600">${esc(m.name)}</td><td class="num" style="color:#8B8C96">${esc(m.mt5Login)}</td><td style="color:#8B8C96;font-size:12px">${esc(m.style||'')}</td><td class="num tr" style="color:#B4FF39">+${(m.roi12m||0).toFixed(1)}%</td><td class="num tr" style="color:#FF3D71">-${(m.drawdown||0).toFixed(1)}%</td><td class="num tr">${((m.feeSplit||0)*100).toFixed(0)}%</td><td><span class="badge ${m.status==='ACTIVE'?'ba':m.status==='PAUSED'?'bp':'bs'}">${m.status}</span></td><td class="tr"><button class="btn l" data-e="${m.id}">Edit</button><button class="btn d" data-del="${m.id}">Delete</button></td></tr>`).join('');
+document.getElementById('tc').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h2 style="margin:0;font-size:18px">Masters (${ml.length})</h2><button class="btn p" id="nm">+ New</button></div><div class="card" style="padding:0;overflow-x:auto"><table><thead><tr><th>Name</th><th>MT5 Login</th><th>Style</th><th class="tr">ROI</th><th class="tr">DD</th><th class="tr">Fee</th><th>Status</th><th class="tr">Actions</th></tr></thead><tbody>${rows||'<tr><td colspan="8" style="padding:20px;text-align:center;color:#8B8C96">No masters. Click + New.</td></tr>'}</tbody></table></div>`;
+document.getElementById('nm').onclick=()=>showModal(null,ml);
+document.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>showModal(ml.find(m=>m.id===b.dataset.e),ml));
+document.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{if(!confirm('Delete?'))return;try{await req('/api/admin/masters/'+b.dataset.del,{method:'DELETE'});toast('Deleted');render();}catch(e){toast(e.message,'err');}});}
+function showModal(m,ml){const isEdit=!!m;m=m||{name:'',country:'',style:'',bio:'',mt5Login:'',mt5Server:'',feeSplit:0.3,status:'ACTIVE',experience:5,roi12m:0,drawdown:0,winRate:0,sharpe:0,profitFactor:0,rating:0};
+const el=document.createElement('div');el.className='modal';el.innerHTML=`<div class="mbox"><h2 style="margin:0 0 4px;font-size:18px">${isEdit?'Edit':'New'} Master</h2><p style="color:#8B8C96;margin:0 0 16px;font-size:13px">MT5 trader profile in marketplace.</p><div class="g2">${['name:Name','country:Country','style:Style','experience:Experience (years)','mt5Login:MT5 Login *','mt5Server:MT5 Server *'].map(f=>{const[k,l]=f.split(':');return`<label><div class="lbl">${l}</div><input class="input" id="f_${k}" value="${esc(m[k]||'')}"/></label>`}).join('')}<label><div class="lbl">Platform Fee (0-1)</div><input class="input" type="number" step="0.01" id="f_feeSplit" value="${m.feeSplit}"/></label><label><div class="lbl">Status</div><select class="select" id="f_status"><option value="ACTIVE" ${m.status==='ACTIVE'?'selected':''}>ACTIVE</option><option value="PAUSED" ${m.status==='PAUSED'?'selected':''}>PAUSED</option><option value="SUSPENDED" ${m.status==='SUSPENDED'?'selected':''}>SUSPENDED</option></select></label></div><div style="border-top:1px solid #2A2A35;margin:12px 0 10px;padding-top:10px"><div style="color:#8B8C96;font-size:12px;margin-bottom:8px">Stats</div><div class="g3">${['roi12m:ROI 12M %','drawdown:Max DD %','winRate:Win Rate %','sharpe:Sharpe','profitFactor:Profit Factor','rating:Rating (0-5)'].map(f=>{const[k,l]=f.split(':');return`<label><div class="lbl">${l}</div><input class="input" type="number" step="0.1" id="f_${k}" value="${m[k]||0}"/></label>`}).join('')}</div></div><label><div class="lbl">Bio</div><textarea class="input" id="f_bio" rows="3">${esc(m.bio||'')}</textarea></label><div class="err" id="merr"></div><div style="display:flex;gap:8px;margin-top:16px"><button class="btn g" id="mc" style="flex:1">Cancel</button><button class="btn p" id="ms" style="flex:1">${isEdit?'Save':'Create'}</button></div></div>`;
+document.body.appendChild(el);
+el.querySelector('#mc').onclick=()=>el.remove();
+el.querySelector('#ms').onclick=async()=>{const g=k=>el.querySelector('#f_'+k)?.value||'';const n=k=>parseFloat(el.querySelector('#f_'+k)?.value)||0;const payload={name:g('name'),country:g('country'),style:g('style'),bio:g('bio'),mt5Login:g('mt5Login'),mt5Server:g('mt5Server'),feeSplit:n('feeSplit'),status:g('status'),experience:parseInt(g('experience'))||0,roi12m:n('roi12m'),drawdown:n('drawdown'),winRate:n('winRate'),sharpe:n('sharpe'),profitFactor:n('profitFactor'),rating:n('rating')};try{if(isEdit)await req('/api/admin/masters/'+m.id,{method:'PATCH',body:payload});else await req('/api/admin/masters',{method:'POST',body:payload});toast(isEdit?'Saved':'Created');el.remove();render();}catch(e){el.querySelector('#merr').textContent=e.message;}};}
+async function renderUsers(){shell('<div style="color:#8B8C96">Loading…</div>');let ul=[];try{ul=await req('/api/admin/users');}catch(e){document.getElementById('tc').innerHTML=`<div class="err">${esc(e.message)}</div>`;return;}
+const rows=ul.map(u=>`<tr><td>${esc(u.email)}</td><td style="color:#8B8C96">${esc(u.name)}</td><td><span class="badge ${u.role==='ADMIN'?'ba':'bs'}">${u.role}</span></td><td class="num tr">${u._count.mt5Accounts}</td><td class="num tr">${u._count.copyRelations}</td><td class="num" style="color:#8B8C96;font-size:12px">${new Date(u.createdAt).toLocaleString()}</td></tr>`).join('');
+document.getElementById('tc').innerHTML=`<h2 style="margin:0 0 14px;font-size:18px">Users (${ul.length})</h2><div class="card" style="padding:0;overflow-x:auto"><table><thead><tr><th>Email</th><th>Name</th><th>Role</th><th class="tr">Accounts</th><th class="tr">Copies</th><th>Joined</th></tr></thead><tbody>${rows||'<tr><td colspan="6" style="padding:20px;text-align:center;color:#8B8C96">No users.</td></tr>'}</tbody></table></div>`;}
+async function renderTrades(){shell('<div style="color:#8B8C96">Loading…</div>');let tl=[];try{tl=await req('/api/trades?limit=100',{auth:false});}catch(e){document.getElementById('tc').innerHTML=`<div class="err">${esc(e.message)}</div>`;return;}
+const rows=tl.map(t=>`<tr><td class="num">${esc(t.symbol)}</td><td><span class="badge ${t.side==='BUY'?'ba':'bs'}">${t.side}</span></td><td class="num tr">${t.lots}</td><td class="num tr">${t.openPrice}</td><td class="num tr">${t.closePrice||'-'}</td><td class="num tr" style="color:${t.pnl>=0?'#B4FF39':'#FF3D71'}">${t.pnl>=0?'+':''}$${(t.pnl||0).toFixed(2)}</td><td><span class="badge ${t.status==='OPEN'?'bp':'ba'}">${t.status}</span></td></tr>`).join('');
+document.getElementById('tc').innerHTML=`<h2 style="margin:0 0 14px;font-size:18px">Trades (${tl.length})</h2><div class="card" style="padding:0;overflow-x:auto"><table><thead><tr><th>Symbol</th><th>Side</th><th class="tr">Lots</th><th class="tr">Open</th><th class="tr">Close</th><th class="tr">P&L</th><th>Status</th></tr></thead><tbody>${rows||'<tr><td colspan="7" style="padding:20px;text-align:center;color:#8B8C96">No trades.</td></tr>'}</tbody></table></div>`;}
+function render(){if(!token||!user)return renderLogin();if(tab==='masters')renderMasters();else if(tab==='users')renderUsers();else renderTrades();}
 render();
-</script>
-</body>
-</html>
+</script></body></html>
