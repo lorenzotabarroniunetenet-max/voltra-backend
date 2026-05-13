@@ -7,11 +7,32 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role { USER ADMIN }
-enum MasterStatus { ACTIVE PAUSED SUSPENDED }
-enum CopyStatus { ACTIVE PAUSED STOPPED }
-enum TradeSide { BUY SELL }
-enum TradeStatus { OPEN CLOSED }
+enum Role {
+  USER
+  ADMIN
+}
+
+enum MasterStatus {
+  ACTIVE
+  PAUSED
+  SUSPENDED
+}
+
+enum CopyStatus {
+  ACTIVE
+  PAUSED
+  STOPPED
+}
+
+enum TradeSide {
+  BUY
+  SELL
+}
+
+enum TradeStatus {
+  OPEN
+  CLOSED
+}
 
 model User {
   id            String         @id @default(cuid())
