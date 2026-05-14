@@ -10,8 +10,7 @@ import contactRoutes from './routes/contact.js'
 const app = express()
 app.set('trust proxy', 1)
 
-const origins = (process.env.ALLOWED_ORIGINS || 'https://voltrasolutions.com,https://www.voltrasolutions.com,http://localhost:5173').split(',')
-app.use(cors({ origin: origins, credentials: true }))
+app.use(cors({ origin: true, credentials: true }))
 app.use(express.json({ limit: '2mb' }))
 
 app.get('/', (req, res) => res.json({ ok: true, service: 'voltra-backend', version: '3.2.0' }))
