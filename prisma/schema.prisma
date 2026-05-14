@@ -57,6 +57,7 @@ model User {
   emailVerifyToken  String?      @unique
   telegramChatId    String?
   kycVerifiedAt     DateTime?
+  notes             String?
   plan              String       @default("FREE")
   createdAt         DateTime     @default(now())
   propAccounts      PropAccount[]
@@ -79,6 +80,7 @@ model Program {
   scalpingAllowed       Boolean      @default(true)
   newsAllowed           Boolean      @default(true)
   weekendHoldAllowed    Boolean      @default(true)
+  payoutFrequencyDays   Int          @default(7)
   priceUsd              Decimal?     @db.Decimal(14,2)
   activationFeeUsd      Decimal?     @db.Decimal(14,2)
   active                Boolean      @default(true)
@@ -99,9 +101,9 @@ model PropAccount {
   startedAt     DateTime      @default(now())
   endedAt       DateTime?
   failureReason String?
+  notes         String?
   snapshots     DailySnapshot[]
   payoutRequests PayoutRequest[]
-  
   @@index([userId, status])
   @@index([status, startedAt])
 }
@@ -126,7 +128,6 @@ model DailySnapshot {
   notes         String?
   enteredBy     String
   createdAt     DateTime    @default(now())
-  
   @@unique([accountId, date])
   @@index([accountId, date(sort: Desc)])
 }
@@ -146,7 +147,6 @@ model PayoutRequest {
   receiptUrl      String?
   requestedAt     DateTime      @default(now())
   processedAt     DateTime?
-  
   @@index([status, requestedAt])
   @@index([userId, requestedAt(sort: Desc)])
 }
@@ -161,7 +161,13 @@ model AuditLog {
   before    Json?
   after     Json?
   createdAt DateTime @default(now())
-  
   @@index([entity, entityId])
   @@index([actorId, createdAt(sort: Desc)])
+}
+
+model Setting {
+  key       String   @id
+  value     String
+  isPublic  Boolean  @default(false)
+  updatedAt DateTime @updatedAt
 }

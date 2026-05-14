@@ -1,3 +1,4 @@
 import jwt from 'jsonwebtoken'
-export function signToken(payload) { return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }) }
-export function verifyToken(token) { return jwt.verify(token, process.env.JWT_SECRET) }
+const SECRET = process.env.JWT_SECRET || 'change-me-in-production'
+export const signToken = (p) => jwt.sign(p, SECRET, { expiresIn: '7d' })
+export const verifyToken = (t) => jwt.verify(t, SECRET)
