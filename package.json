@@ -1,13 +1,11 @@
 {
   "name": "voltra-backend",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "type": "module",
   "scripts": {
-    "dev": "node --watch src/server.js",
+    "dev": "node src/server.js",
     "start": "node src/server.js",
-    "db:push": "prisma db push",
-    "db:seed": "node src/seed.js",
-    "postinstall": "prisma generate"
+    "db:seed": "node src/seed.js"
   },
   "dependencies": {
     "@prisma/client": "5.20.0",
@@ -18,6 +16,7 @@
     "express-rate-limit": "^7.4.0",
     "jsonwebtoken": "^9.0.2",
     "metaapi.cloud-sdk": "^29.3.3",
+    "resend": "^4.0.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {
