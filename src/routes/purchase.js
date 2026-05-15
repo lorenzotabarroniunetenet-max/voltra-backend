@@ -29,13 +29,13 @@ r.get('/payment-info', async (req, res) => {
     const addr = await getSetting(n.settingKey, '')
     if (addr) wallets.push({ network: n.value, label: n.label, address: addr })
   }
-  // Fallback retrocompatibile
   if (wallets.length === 0) {
     const address = await getSetting('PAYMENT_ADDRESS', process.env.PAYMENT_ADDRESS || '')
     const network = await getSetting('PAYMENT_NETWORK', process.env.PAYMENT_NETWORK || 'USDT TRC20')
     if (address) wallets.push({ network: 'USDT_TRC20', label: network, address })
   }
-  res.json({ wallets })
+  const telegramUrl = await getSetting('TELEGRAM_PAYMENTS_URL', '') || await getSetting('TELEGRAM_SUPPORT_URL', '')
+  res.json({ wallets, telegramUrl })
 })
 
 r.post('/request', requireAuth, async (req, res) => {

@@ -43,6 +43,7 @@ const defaultSettings = [
   { key: 'EMAIL_FROM', value: 'Voltra <noreply@voltrasolutions.com>', isPublic: false },
   { key: 'TELEGRAM_SUPPORT_URL', value: '', isPublic: true },
   { key: 'TELEGRAM_SUPPORT_HANDLE', value: '', isPublic: true },
+  { key: 'TELEGRAM_PAYMENTS_URL', value: '', isPublic: true },
   { key: 'TELEGRAM_ADMIN_CHAT_ID', value: '', isPublic: false },
   { key: 'PAYMENT_USDT_TRC20', value: '', isPublic: false },
   { key: 'PAYMENT_USDT_ERC20', value: '', isPublic: false },
