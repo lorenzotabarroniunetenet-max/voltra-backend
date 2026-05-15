@@ -4,14 +4,38 @@ import bcrypt from 'bcrypt'
 const prisma = new PrismaClient()
 
 const programs = [
-  // Challenge
-  { name: 'Challenge 25K', accountSize: 25000, phase: 'CHALLENGE', profitTargetPct: 8, maxDailyLossPct: 5, maxOverallLossPct: 10, minTradingDays: 4, profitSplitPct: 80, payoutFrequencyDays: 7, scalpingAllowed: true, newsAllowed: true, weekendHoldAllowed: false, priceUsd: 160 },
-  { name: 'Challenge 50K', accountSize: 50000, phase: 'CHALLENGE', profitTargetPct: 8, maxDailyLossPct: 5, maxOverallLossPct: 10, minTradingDays: 4, profitSplitPct: 80, payoutFrequencyDays: 7, scalpingAllowed: true, newsAllowed: true, weekendHoldAllowed: false, priceUsd: 320 },
-  { name: 'Challenge 100K', accountSize: 100000, phase: 'CHALLENGE', profitTargetPct: 8, maxDailyLossPct: 5, maxOverallLossPct: 10, minTradingDays: 4, profitSplitPct: 80, payoutFrequencyDays: 7, scalpingAllowed: true, newsAllowed: true, weekendHoldAllowed: false, priceUsd: 640 },
-  // Instant Funding
-  { name: 'Instant 25K', accountSize: 25000, phase: 'INSTANT', profitTargetPct: null, maxDailyLossPct: 4, maxOverallLossPct: 8, minTradingDays: null, profitSplitPct: 70, payoutFrequencyDays: 7, scalpingAllowed: true, newsAllowed: false, weekendHoldAllowed: false, priceUsd: 999 },
-  { name: 'Instant 50K', accountSize: 50000, phase: 'INSTANT', profitTargetPct: null, maxDailyLossPct: 4, maxOverallLossPct: 8, minTradingDays: null, profitSplitPct: 70, payoutFrequencyDays: 7, scalpingAllowed: true, newsAllowed: false, weekendHoldAllowed: false, priceUsd: 1999 },
-  { name: 'Instant 100K', accountSize: 100000, phase: 'INSTANT', profitTargetPct: null, maxDailyLossPct: 4, maxOverallLossPct: 8, minTradingDays: null, profitSplitPct: 70, payoutFrequencyDays: 7, scalpingAllowed: true, newsAllowed: false, weekendHoldAllowed: false, priceUsd: 3999 },
+  {
+    name: 'Caporale',
+    accountSize: 10000, phase: 'CHALLENGE',
+    profitTargetPct: 8, maxDailyLossPct: 5, maxOverallLossPct: 10,
+    minTradingDays: 4, profitSplitPct: 70, payoutFrequencyDays: 7,
+    scalpingAllowed: true, newsAllowed: true, weekendHoldAllowed: false,
+    priceUsd: 80,
+  },
+  {
+    name: 'Sergente',
+    accountSize: 25000, phase: 'CHALLENGE',
+    profitTargetPct: 8, maxDailyLossPct: 5, maxOverallLossPct: 10,
+    minTradingDays: 4, profitSplitPct: 75, payoutFrequencyDays: 7,
+    scalpingAllowed: true, newsAllowed: true, weekendHoldAllowed: false,
+    priceUsd: 160,
+  },
+  {
+    name: 'Capitano',
+    accountSize: 50000, phase: 'CHALLENGE',
+    profitTargetPct: 8, maxDailyLossPct: 5, maxOverallLossPct: 10,
+    minTradingDays: 4, profitSplitPct: 80, payoutFrequencyDays: 7,
+    scalpingAllowed: true, newsAllowed: true, weekendHoldAllowed: false,
+    priceUsd: null, // WIP
+  },
+  {
+    name: 'Colonnello',
+    accountSize: 100000, phase: 'CHALLENGE',
+    profitTargetPct: 8, maxDailyLossPct: 5, maxOverallLossPct: 10,
+    minTradingDays: 4, profitSplitPct: 85, payoutFrequencyDays: 7,
+    scalpingAllowed: true, newsAllowed: true, weekendHoldAllowed: false,
+    priceUsd: null, // WIP
+  },
 ]
 
 const defaultSettings = [
@@ -31,8 +55,8 @@ async function main() {
   const passwordHash = await bcrypt.hash(adminPass, 10)
   await prisma.user.upsert({
     where: { email: adminEmail },
-    update: { role: 'ADMIN', emailVerified: true },
-    create: { email: adminEmail, passwordHash, name: 'Voltra Admin', role: 'ADMIN', emailVerified: true },
+    update: { role: 'ADMIN', emailVerified: true, approved: true },
+    create: { email: adminEmail, passwordHash, name: 'Voltra Admin', role: 'ADMIN', emailVerified: true, approved: true },
   })
   console.log(`Admin ready: ${adminEmail} / ${adminPass}`)
 

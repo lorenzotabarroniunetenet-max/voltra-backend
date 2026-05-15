@@ -4,7 +4,7 @@ import bcrypt from 'bcrypt'
 import { randomBytes } from 'crypto'
 import { prisma } from '../lib/prisma.js'
 import { signToken } from '../lib/jwt.js'
-import { sendVerificationEmail, sendWelcomeEmail } from '../lib/email.js'
+import { sendVerificationEmail, sendWelcomeEmail, sendApprovalEmail } from '../lib/email.js'
 
 const r = Router()
 
@@ -76,6 +76,9 @@ r.post('/login', async (req, res) => {
     }
     if (!user.emailVerified) {
       return res.status(403).json({ error: 'Email non verificata. Controlla la tua casella.' })
+    }
+    if (!user.approved && user.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Accesso in attesa di approvazione. Ti contatteremo a breve.' })
     }
     res.json({
       token: signToken({ userId: user.id, role: user.role }),

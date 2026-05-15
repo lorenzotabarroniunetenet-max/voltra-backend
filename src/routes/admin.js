@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
 import { requireAuth, requireAdmin } from '../lib/middleware.js'
 import { getAllSettings, setSetting } from '../lib/settings.js'
+import { sendApprovalEmail } from '../lib/email.js'
 
 const r = Router()
 r.use(requireAuth, requireAdmin)
@@ -183,13 +184,34 @@ r.get('/users', async (req, res) => {
   const users = await prisma.user.findMany({
     where: { role: 'TRADER' },
     select: {
-      id: true, name: true, email: true, emailVerified: true, createdAt: true,
+      id: true, name: true, email: true, emailVerified: true, approved: true, approvedAt: true, createdAt: true,
       propAccounts: { select: { id: true, status: true, startBalance: true, program: { select: { name: true } } } },
       _count: { select: { payoutRequests: true } },
     },
     orderBy: { createdAt: 'desc' },
   })
   res.json(users)
+})
+
+r.post('/users/:id/approve', async (req, res) => {
+  try {
+    const user = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { approved: true, approvedAt: new Date() },
+    })
+    sendApprovalEmail(user.email, user.name).catch(() => {})
+    res.json({ ok: true, user })
+  } catch (e) { res.status(400).json({ error: e.message }) }
+})
+
+r.post('/users/:id/revoke', async (req, res) => {
+  try {
+    const user = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { approved: false, approvedAt: null },
+    })
+    res.json({ ok: true, user })
+  } catch (e) { res.status(400).json({ error: e.message }) }
 })
 
 // User detail with EVERYTHING

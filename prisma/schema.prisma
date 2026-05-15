@@ -55,6 +55,8 @@ model User {
   role              Role         @default(TRADER)
   emailVerified     Boolean      @default(false)
   emailVerifyToken  String?      @unique
+  approved          Boolean      @default(false)
+  approvedAt        DateTime?
   telegramChatId    String?
   kycVerifiedAt     DateTime?
   notes             String?
