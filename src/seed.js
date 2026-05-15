@@ -44,8 +44,12 @@ const defaultSettings = [
   { key: 'TELEGRAM_SUPPORT_URL', value: '', isPublic: true },
   { key: 'TELEGRAM_SUPPORT_HANDLE', value: '', isPublic: true },
   { key: 'TELEGRAM_ADMIN_CHAT_ID', value: '', isPublic: false },
-  { key: 'PAYMENT_ADDRESS', value: '', isPublic: false },
-  { key: 'PAYMENT_NETWORK', value: 'USDT TRC20', isPublic: false },
+  { key: 'PAYMENT_USDT_TRC20', value: '', isPublic: false },
+  { key: 'PAYMENT_USDT_ERC20', value: '', isPublic: false },
+  { key: 'PAYMENT_USDC_ERC20', value: '', isPublic: false },
+  { key: 'PAYMENT_USDC_SOLANA', value: '', isPublic: false },
+  { key: 'PAYMENT_BTC', value: '', isPublic: false },
+  { key: 'PAYMENT_ETH', value: '', isPublic: false },
 ]
 
 async function main() {
@@ -66,11 +70,18 @@ async function main() {
   }
   console.log(`Settings seeded: ${defaultSettings.length}`)
 
-  // Programs
+  // Programs - seed nuovi gradi militari + disattiva vecchi programmi non militari
+  const militaryNames = programs.map(p => p.name)
+  await prisma.program.updateMany({
+    where: { name: { notIn: militaryNames } },
+    data: { active: false },
+  })
+  console.log(`Disattivati programmi non militari`)
+
   for (const p of programs) {
     const existing = await prisma.program.findFirst({ where: { name: p.name } })
     if (existing) {
-      await prisma.program.update({ where: { id: existing.id }, data: p })
+      await prisma.program.update({ where: { id: existing.id }, data: { ...p, active: true } })
     } else {
       await prisma.program.create({ data: p })
     }
