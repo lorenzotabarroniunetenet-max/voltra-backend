@@ -17,6 +17,14 @@ app.use(express.json({ limit: '2mb' }))
 app.get('/', (req, res) => res.json({ ok: true, service: 'voltra-backend', version: '3.9.0' }))
 app.get('/health', (req, res) => res.json({ ok: true }))
 
+app.get('/api/public/features', async (req, res) => {
+  try {
+    const { getSetting } = await import('./lib/settings.js')
+    const gunshotDisabled = (await getSetting('GUNSHOT_DISABLED', 'false')) === 'true'
+    res.json({ gunshotDisabled })
+  } catch (e) { res.json({ gunshotDisabled: false }) }
+})
+
 app.use('/api/auth', authRoutes)
 app.use('/api/prop', propRoutes)
 app.use('/api/admin', adminRoutes)

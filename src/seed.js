@@ -53,6 +53,7 @@ const defaultSettings = [
   { key: 'PAYMENT_USDC_SOLANA', value: '', isPublic: false },
   { key: 'PAYMENT_BTC', value: '', isPublic: false },
   { key: 'PAYMENT_ETH', value: '', isPublic: false },
+  { key: 'GUNSHOT_DISABLED', value: 'false', isPublic: true },
 ]
 
 async function main() {

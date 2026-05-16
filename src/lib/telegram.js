@@ -53,3 +53,22 @@ export async function notifyContact({ name, email, subject, message }) {
     `Messaggio:\n${message.slice(0, 500)}${message.length > 500 ? '...' : ''}`
   )
 }
+
+const CATEGORY_LABELS = {
+  pagamento: '💰 PAGAMENTO',
+  tecnico: '🔧 TECNICO',
+  onorificenze: '🎖 ONORIFICENZE',
+  grado: '⭐ GRADO',
+  altro: '◈ ALTRO',
+}
+
+export async function notifySupportTicket({ user, category, subject, message }) {
+  const tag = CATEGORY_LABELS[category] || '◈ ALTRO'
+  await notifyAdmin(
+    `🎫 *Nuovo Ticket Supporto* — ${tag}\n\n` +
+    `Membro: ${user.name} (${user.email})\n` +
+    `Oggetto: *${subject}*\n\n` +
+    `Messaggio:\n${message.slice(0, 800)}${message.length > 800 ? '...' : ''}\n\n` +
+    `[Apri Stato Maggiore](https://voltrasolutions.com/admin)`
+  )
+}
