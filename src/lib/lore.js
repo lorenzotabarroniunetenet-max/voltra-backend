@@ -61,16 +61,24 @@ export const GRADE_LORE = {
 }
 
 export const DECORATIONS = [
-  { slug: 'stella-anzianita-bronzo', name: 'Stella di Anzianità — Bronzo', criterion: 'Conferita al compimento dei 100 giorni di servizio attivo continuativo.', iconKey: '🥉', rarity: 'common', autoTrigger: 'days:100' },
-  { slug: 'stella-anzianita-argento', name: 'Stella di Anzianità — Argento', criterion: 'Conferita al compimento dei 365 giorni di servizio attivo continuativo.', iconKey: '🥈', rarity: 'uncommon', autoTrigger: 'days:365' },
-  { slug: 'stella-anzianita-oro', name: 'Stella di Anzianità — Oro', criterion: 'Conferita al compimento dei 1000 giorni di servizio attivo continuativo.', iconKey: '🥇', rarity: 'rare', autoTrigger: 'days:1000' },
-  { slug: 'croce-prima-linea', name: 'Croce di Prima Linea', criterion: 'Conferita al Caporale che ha svolto con esattezza i propri compiti nel primo trimestre.', iconKey: '✚', rarity: 'uncommon', autoTrigger: null },
-  { slug: 'croce-comando-avanzato', name: 'Croce di Comando Avanzato', criterion: 'Conferita al Sergente per lucidità nella trasmissione delle direttive.', iconKey: '✚', rarity: 'uncommon', autoTrigger: null },
-  { slug: 'stella-operazioni-speciali', name: 'Stella delle Operazioni Speciali', criterion: 'Conferita al Capitano per condotta autonoma di un\'operazione complessa.', iconKey: '★', rarity: 'rare', autoTrigger: null },
-  { slug: 'ordine-comando-supremo', name: 'Ordine del Comando Supremo', criterion: 'Conferita al Colonnello per esempio personale duraturo. Non più di una assegnazione per anno solare.', iconKey: '⚜', rarity: 'legendary', autoTrigger: null },
-  { slug: 'encomio-solenne', name: 'Encomio Solenne del Comando', criterion: 'Lode pubblica per atto specifico di particolare rilievo, pubblicata in Ordine del Giorno.', iconKey: '⊕', rarity: 'rare', autoTrigger: null },
-  { slug: 'menzione-discrezione', name: 'Menzione di Discrezione', criterion: 'Onorificenza silenziosa — conferita senza pubblicazione in Albo d\'Onore.', iconKey: '◈', rarity: 'rare', autoTrigger: null },
-  { slug: 'sigillo-fondatore', name: 'Sigillo del Fondatore', criterion: 'Onorificenza eccezionale, conferita una sola volta nella storia del club a ciascun membro che ne sia ritenuto degno.', iconKey: '✦', rarity: 'legendary', autoTrigger: null },
+  { slug: 'compiacimento', name: 'Compiacimento', criterion: 'Conferito al raggiungimento di 3 operazioni concluse.', iconKey: '◦', rarity: 'common', autoTrigger: 'purchases:3' },
+  { slug: 'elogio', name: 'Elogio', criterion: 'Conferito al raggiungimento di 6 operazioni concluse.', iconKey: '◉', rarity: 'common', autoTrigger: 'purchases:6' },
+  { slug: 'stella-bronzo', name: 'Stella di Bronzo', criterion: 'Conferita al raggiungimento di 15 operazioni concluse.', iconKey: '🥉', rarity: 'uncommon', autoTrigger: 'purchases:15' },
+  { slug: 'encomio-semplice', name: 'Encomio Semplice', criterion: 'Conferito al raggiungimento di 17 operazioni concluse.', iconKey: '✚', rarity: 'uncommon', autoTrigger: 'purchases:17' },
+  { slug: 'stella-argento', name: 'Stella di Argento', criterion: 'Conferita al raggiungimento di 30 operazioni concluse.', iconKey: '🥈', rarity: 'rare', autoTrigger: 'purchases:30' },
+  { slug: 'encomio-solenne', name: 'Encomio Solenne', criterion: 'Conferito al raggiungimento di 40 operazioni concluse.', iconKey: '⊕', rarity: 'rare', autoTrigger: 'purchases:40' },
+  { slug: 'stella-oro', name: 'Stella d\'Oro', criterion: 'Conferita al raggiungimento di 60 operazioni concluse.', iconKey: '🥇', rarity: 'legendary', autoTrigger: 'purchases:60' },
+]
+
+// Soglie ordinate per progressione visibile
+export const PURCHASE_THRESHOLDS = [
+  { slug: 'compiacimento', name: 'Compiacimento', threshold: 3, iconKey: '◦' },
+  { slug: 'elogio', name: 'Elogio', threshold: 6, iconKey: '◉' },
+  { slug: 'stella-bronzo', name: 'Stella di Bronzo', threshold: 15, iconKey: '🥉' },
+  { slug: 'encomio-semplice', name: 'Encomio Semplice', threshold: 17, iconKey: '✚' },
+  { slug: 'stella-argento', name: 'Stella di Argento', threshold: 30, iconKey: '🥈' },
+  { slug: 'encomio-solenne', name: 'Encomio Solenne', threshold: 40, iconKey: '⊕' },
+  { slug: 'stella-oro', name: 'Stella d\'Oro', threshold: 60, iconKey: '🥇' },
 ]
 
 export function generateMatricola(userId) {

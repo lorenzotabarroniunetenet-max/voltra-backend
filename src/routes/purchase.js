@@ -118,10 +118,29 @@ r.post('/request', requireAuth, async (req, res) => {
       }
     }
 
-    notifyPurchaseReceipt({ user: req.user, program, receiptUrl: txHash, network, coupon: couponInfo }).catch(() => {})
+    // Incrementa il contatore operazioni del membro
+    const updatedUser = await prisma.user.update({
+      where: { id: req.user.id },
+      data: { purchaseCount: { increment: 1 } },
+    })
+
+    // Crea entry nel registro di servizio
+    try {
+      await prisma.serviceLogEntry.create({
+        data: {
+          userId: req.user.id,
+          type: 'purchase',
+          title: `Operazione conclusa — ${program.name}`,
+          description: txHash ? `TxHash: ${txHash}` : null,
+        },
+      })
+    } catch (e) {}
+
+    notifyPurchaseReceipt({ user: req.user, program, receiptUrl: txHash, network, coupon: couponInfo, purchaseCount: updatedUser.purchaseCount }).catch(() => {})
 
     res.json({
       message: 'Richiesta trasmessa al Comando. Verifica del pagamento entro 24 ore.',
+      purchaseCount: updatedUser.purchaseCount,
     })
   } catch (e) { res.status(400).json({ error: e.message }) }
 })

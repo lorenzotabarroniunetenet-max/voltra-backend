@@ -30,7 +30,7 @@ export async function notifyPayoutRequest({ user, account, program, amount, netw
   )
 }
 
-export async function notifyPurchaseReceipt({ user, program, receiptUrl, network, coupon }) {
+export async function notifyPurchaseReceipt({ user, program, receiptUrl, network, coupon, purchaseCount }) {
   await notifyAdmin(
     `🎖 *Nuova Richiesta Grado*\n\n` +
     `Membro: ${user.name} (${user.email})\n` +
@@ -39,6 +39,7 @@ export async function notifyPurchaseReceipt({ user, program, receiptUrl, network
     (coupon ? `Coupon: \`${coupon}\`\n` : '') +
     (network ? `Network: ${network}\n` : '') +
     (receiptUrl ? `TxHash: \`${receiptUrl}\`\n` : '⚠️ Nessuna TxHash\n') +
+    (purchaseCount ? `\nOperazioni totali del membro: *${purchaseCount}*\n` : '') +
     `\n[Apri Stato Maggiore](https://voltrasolutions.com/admin)`
   )
 }

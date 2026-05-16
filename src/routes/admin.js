@@ -185,6 +185,7 @@ r.get('/users', async (req, res) => {
     where: { role: 'TRADER' },
     select: {
       id: true, name: true, email: true, emailVerified: true, approved: true, approvedAt: true, createdAt: true,
+      rank: true, purchaseCount: true,
       propAccounts: { select: { id: true, status: true, startBalance: true, program: { select: { name: true } } } },
       _count: { select: { payoutRequests: true } },
     },
@@ -266,7 +267,7 @@ r.get('/users/:id', async (req, res) => {
       id: true, name: true, email: true, role: true, emailVerified: true,
       kycVerifiedAt: true, telegramChatId: true, notes: true, createdAt: true,
       rank: true, matricola: true, enlistedAt: true, approved: true, approvedAt: true,
-      email2faEnabled: true,
+      email2faEnabled: true, purchaseCount: true,
       propAccounts: {
         include: {
           program: true,
@@ -304,6 +305,19 @@ r.delete('/users/:id', async (req, res) => {
   try {
     await prisma.user.delete({ where: { id: req.params.id } })
     res.json({ ok: true })
+  } catch (e) { res.status(400).json({ error: e.message }) }
+})
+
+// Adjust operation counter (manual override / correction)
+r.post('/users/:id/set-purchases', async (req, res) => {
+  try {
+    const { count } = z.object({ count: z.number().int().min(0).max(99999) }).parse(req.body)
+    const user = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { purchaseCount: count },
+      select: { purchaseCount: true },
+    })
+    res.json(user)
   } catch (e) { res.status(400).json({ error: e.message }) }
 })
 

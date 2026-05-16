@@ -75,6 +75,7 @@ model User {
   email2faExpiry    DateTime?
   email2faNudgeOff  Boolean      @default(false)
   showInAlbo        Boolean      @default(true)
+  purchaseCount     Int          @default(0)
   createdAt         DateTime     @default(now())
   propAccounts      PropAccount[]
   payoutRequests    PayoutRequest[]

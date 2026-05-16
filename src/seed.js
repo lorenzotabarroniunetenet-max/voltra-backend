@@ -91,7 +91,18 @@ async function main() {
   }
   console.log(`Programs seeded: ${programs.length}`)
 
-  // Decorations - seed catalogo onorificenze
+  // Decorations - rimuove obsolete e reinserisce catalogo aggiornato
+  const validSlugs = DECORATIONS.map(d => d.slug)
+  const obsolete = await prisma.decoration.findMany({
+    where: { slug: { notIn: validSlugs } },
+    select: { id: true, slug: true },
+  })
+  if (obsolete.length > 0) {
+    // Cancella prima le award legate a decorazioni obsolete
+    await prisma.decorationAward.deleteMany({ where: { decorationId: { in: obsolete.map(o => o.id) } } })
+    await prisma.decoration.deleteMany({ where: { id: { in: obsolete.map(o => o.id) } } })
+    console.log(`Rimosse ${obsolete.length} decorazioni obsolete: ${obsolete.map(o => o.slug).join(', ')}`)
+  }
   for (const d of DECORATIONS) {
     await prisma.decoration.upsert({
       where: { slug: d.slug },

@@ -2,10 +2,41 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
 import { requireAuth, requireAdmin } from '../lib/middleware.js'
-import { GRADE_LORE, DECORATIONS, generateMatricola } from '../lib/lore.js'
+import { GRADE_LORE, DECORATIONS, PURCHASE_THRESHOLDS, generateMatricola } from '../lib/lore.js'
 
 const r = Router()
 r.use(requireAuth)
+
+// ─── Requisiti onorificenze (progressione operativa) ───
+r.get('/requisiti', async (req, res) => {
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    select: { purchaseCount: true },
+  })
+  const count = user?.purchaseCount || 0
+
+  const awards = await prisma.decorationAward.findMany({
+    where: { userId: req.user.id },
+    include: { decoration: { select: { slug: true } } },
+  })
+  const awardedSlugs = new Set(awards.map(a => a.decoration.slug))
+
+  const requisiti = PURCHASE_THRESHOLDS.map(t => ({
+    slug: t.slug,
+    name: t.name,
+    iconKey: t.iconKey,
+    threshold: t.threshold,
+    progress: Math.min(count, t.threshold),
+    percentage: Math.min(100, Math.round((count / t.threshold) * 100)),
+    achieved: count >= t.threshold,
+    awarded: awardedSlugs.has(t.slug),
+  }))
+
+  res.json({
+    purchaseCount: count,
+    requisiti,
+  })
+})
 
 // ─── Briefings (Sala Briefing) ───
 r.get('/briefings', async (req, res) => {
@@ -48,6 +79,7 @@ r.get('/dossier', async (req, res) => {
     lore,
     enlistedAt,
     daysOfService,
+    purchaseCount: user.purchaseCount || 0,
     decorations: user.decorations.map(d => ({
       id: d.id,
       slug: d.decoration.slug,
