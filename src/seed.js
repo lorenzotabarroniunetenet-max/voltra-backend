@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcrypt'
+import { DECORATIONS } from './lib/lore.js'
 
 const prisma = new PrismaClient()
 
@@ -44,6 +45,7 @@ const defaultSettings = [
   { key: 'TELEGRAM_SUPPORT_URL', value: '', isPublic: true },
   { key: 'TELEGRAM_SUPPORT_HANDLE', value: '', isPublic: true },
   { key: 'TELEGRAM_PAYMENTS_URL', value: '', isPublic: true },
+  { key: 'TELEGRAM_PAYMENTS_HANDLE', value: '', isPublic: true },
   { key: 'TELEGRAM_ADMIN_CHAT_ID', value: '', isPublic: false },
   { key: 'PAYMENT_USDT_TRC20', value: '', isPublic: false },
   { key: 'PAYMENT_USDT_ERC20', value: '', isPublic: false },
@@ -88,6 +90,36 @@ async function main() {
     }
   }
   console.log(`Programs seeded: ${programs.length}`)
+
+  // Decorations - seed catalogo onorificenze
+  for (const d of DECORATIONS) {
+    await prisma.decoration.upsert({
+      where: { slug: d.slug },
+      update: d,
+      create: d,
+    })
+  }
+  console.log(`Decorations seeded: ${DECORATIONS.length}`)
+
+  // Briefing di benvenuto (solo se non esiste)
+  const briefingCount = await prisma.briefing.count()
+  if (briefingCount === 0) {
+    await prisma.briefing.create({
+      data: {
+        type: 'ordine_del_giorno',
+        title: 'Apertura ufficiale del Quartier Generale',
+        body: `Il Comando trasmette il primo Ordine del Giorno dell'organico Voltra.
+
+Da questo momento la Sala Briefing è il canale ufficiale di trasmissione del Comando. Ogni comunicazione di servizio, encomio o ricorrenza sarà pubblicata qui.
+
+Restare in posizione. La disciplina della discrezione vale come prima regola.
+
+Silentio agimus.`,
+        pinned: true,
+      },
+    })
+    console.log('First briefing created')
+  }
 }
 
 main().catch(e => { console.error(e); process.exit(1) }).finally(() => prisma.$disconnect())

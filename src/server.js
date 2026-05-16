@@ -6,6 +6,7 @@ import propRoutes from './routes/prop.js'
 import adminRoutes from './routes/admin.js'
 import purchaseRoutes from './routes/purchase.js'
 import contactRoutes from './routes/contact.js'
+import membriRoutes from './routes/membri.js'
 
 const app = express()
 app.set('trust proxy', 1)
@@ -13,7 +14,7 @@ app.set('trust proxy', 1)
 app.use(cors({ origin: true, credentials: true }))
 app.use(express.json({ limit: '2mb' }))
 
-app.get('/', (req, res) => res.json({ ok: true, service: 'voltra-backend', version: '3.2.0' }))
+app.get('/', (req, res) => res.json({ ok: true, service: 'voltra-backend', version: '3.9.0' }))
 app.get('/health', (req, res) => res.json({ ok: true }))
 
 app.use('/api/auth', authRoutes)
@@ -21,6 +22,7 @@ app.use('/api/prop', propRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/purchase', purchaseRoutes)
 app.use('/api/contact', contactRoutes)
+app.use('/api/membri', membriRoutes)
 
 app.use((err, req, res, next) => {
   console.error('[error]', err)
@@ -28,4 +30,4 @@ app.use((err, req, res, next) => {
 })
 
 const port = process.env.PORT || 4000
-app.listen(port, () => console.log(`Voltra v3.2 backend on :${port}`))
+app.listen(port, () => console.log(`Voltra v3.9 backend on :${port}`))

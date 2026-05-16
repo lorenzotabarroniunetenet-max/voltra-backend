@@ -82,6 +82,44 @@ export async function sendApprovalEmail(email, name) {
   } catch (e) { console.error('[email] approval failed:', e.message) }
 }
 
+export async function sendPasswordResetEmail(email, name, token) {
+  if (!resend) return
+  const { from, support } = await getEmailConfig()
+  const resetUrl = `https://voltrasolutions.com/reset-password?token=${token}`
+  const html = baseTemplate(
+    `Reimpostazione credenziale richiesta`,
+    `<p>Egregio/a ${name},</p>
+     <p>è stata richiesta la reimpostazione della credenziale di accesso al Quartier Generale.</p>
+     <p>Cliccare il pulsante sottostante per procedere. Il collegamento ha validità di un'ora.</p>
+     <p style="color:#888;font-size:13px;margin-top:24px">Se non ha richiesto la reimpostazione, ignori questo messaggio. La credenziale corrente resta valida.</p>
+     <p style="margin-top:24px"><strong style="color:#ffffff">Il Comando</strong><br><span style="color:#888">Voltra</span></p>`,
+    resetUrl, 'Reimposta credenziale', support
+  )
+  try {
+    await resend.emails.send({ from, to: email, subject: 'Reimpostazione credenziale — Voltra', html, replyTo: support })
+  } catch (e) { console.error('[email] reset failed:', e.message) }
+}
+
+export async function sendLoginCodeEmail(email, name, code) {
+  if (!resend) return
+  const { from, support } = await getEmailConfig()
+  const html = baseTemplate(
+    `Codice di accesso al Quartier Generale`,
+    `<p>Egregio/a ${name},</p>
+     <p>è in corso un tentativo di accesso al Suo account. Il codice di verifica è:</p>
+     <div style="margin:24px 0;padding:24px;background:#0a0a0a;border:1px solid #B4FF39;border-radius:8px;text-align:center">
+       <div style="font-family:'JetBrains Mono',monospace;font-size:36px;letter-spacing:0.3em;color:#B4FF39;font-weight:700">${code}</div>
+       <div style="font-size:11px;color:#888;margin-top:8px;letter-spacing:0.1em">VALIDO 10 MINUTI</div>
+     </div>
+     <p style="color:#888;font-size:13px">Se non sta tentando di accedere, ignori questa email e cambi immediatamente la propria credenziale.</p>
+     <p style="margin-top:24px"><strong style="color:#ffffff">Il Comando</strong><br><span style="color:#888">Voltra</span></p>`,
+    null, null, support
+  )
+  try {
+    await resend.emails.send({ from, to: email, subject: `Codice accesso ${code} — Voltra`, html, replyTo: support })
+  } catch (e) { console.error('[email] login code failed:', e.message) }
+}
+
 export async function sendContactEmail({ name, email, subject, message }) {
   if (!resend) return
   const { from, support } = await getEmailConfig()

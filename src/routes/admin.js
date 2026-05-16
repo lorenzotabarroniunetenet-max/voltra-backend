@@ -195,10 +195,54 @@ r.get('/users', async (req, res) => {
 
 r.post('/users/:id/approve', async (req, res) => {
   try {
+    const target = await prisma.user.findUnique({ where: { id: req.params.id } })
+    if (!target) return res.status(404).json({ error: 'not found' })
+
+    const now = new Date()
+    const matricola = target.matricola || `VLT-${target.id.slice(-4).toUpperCase()}`
+
     const user = await prisma.user.update({
       where: { id: req.params.id },
-      data: { approved: true, approvedAt: new Date() },
+      data: {
+        approved: true,
+        approvedAt: now,
+        matricola: target.matricola || matricola,
+        enlistedAt: target.enlistedAt || now,
+        rank: target.rank || 'Caporale',
+      },
     })
+
+    // Service log - arruolamento
+    await prisma.serviceLogEntry.create({
+      data: {
+        userId: user.id,
+        type: 'enlistment',
+        title: 'Arruolamento',
+        body: `Ammissione confermata. Matricola ${matricola} assegnata. Grado iniziale: ${user.rank}.`,
+        iconKey: 'flag',
+      },
+    }).catch(() => {})
+
+    // Cerimonia di Imposizione dei Gradi
+    await prisma.ceremony.create({
+      data: {
+        userId: user.id,
+        type: 'enlistment',
+        payload: { rank: user.rank, matricola },
+      },
+    }).catch(() => {})
+
+    // Notifica
+    await prisma.notification.create({
+      data: {
+        userId: user.id,
+        type: 'enlistment',
+        title: `Benvenuto al grado di ${user.rank}`,
+        body: `Matricola ${matricola} attiva.`,
+        url: '/dashboard',
+      },
+    }).catch(() => {})
+
     sendApprovalEmail(user.email, user.name).catch(() => {})
     res.json({ ok: true, user })
   } catch (e) { res.status(400).json({ error: e.message }) }
@@ -221,6 +265,8 @@ r.get('/users/:id', async (req, res) => {
     select: {
       id: true, name: true, email: true, role: true, emailVerified: true,
       kycVerifiedAt: true, telegramChatId: true, notes: true, createdAt: true,
+      rank: true, matricola: true, enlistedAt: true, approved: true, approvedAt: true,
+      email2faEnabled: true,
       propAccounts: {
         include: {
           program: true,
@@ -294,6 +340,428 @@ r.patch('/payouts/:id', async (req, res) => {
     })
     res.json(payout)
   } catch (e) { res.status(400).json({ error: e.message }) }
+})
+
+// ─── Briefings (Sala Briefing) ───
+r.get('/briefings', async (req, res) => {
+  const list = await prisma.briefing.findMany({ orderBy: { publishedAt: 'desc' } })
+  res.json(list)
+})
+
+r.post('/briefings', async (req, res) => {
+  try {
+    const data = z.object({
+      type: z.enum(['ordine_del_giorno', 'comunicazione', 'encomio', 'ricorrenza']).default('ordine_del_giorno'),
+      title: z.string().min(3),
+      body: z.string().min(3),
+      pinned: z.boolean().optional(),
+    }).parse(req.body)
+    const briefing = await prisma.briefing.create({
+      data: { ...data, authorId: req.user.id },
+    })
+
+    // Notifica tutti gli utenti approvati
+    const users = await prisma.user.findMany({
+      where: { role: 'TRADER', approved: true },
+      select: { id: true },
+    })
+    if (users.length > 0) {
+      await prisma.notification.createMany({
+        data: users.map(u => ({
+          userId: u.id,
+          type: 'briefing',
+          title: 'Nuovo Ordine del Giorno',
+          body: briefing.title,
+          url: '/briefing',
+        })),
+      })
+    }
+    res.json(briefing)
+  } catch (e) { res.status(400).json({ error: e.message }) }
+})
+
+r.patch('/briefings/:id', async (req, res) => {
+  try {
+    const data = z.object({
+      title: z.string().optional(),
+      body: z.string().optional(),
+      pinned: z.boolean().optional(),
+    }).parse(req.body)
+    const b = await prisma.briefing.update({ where: { id: req.params.id }, data })
+    res.json(b)
+  } catch (e) { res.status(400).json({ error: e.message }) }
+})
+
+r.delete('/briefings/:id', async (req, res) => {
+  try {
+    await prisma.briefing.delete({ where: { id: req.params.id } })
+    res.json({ ok: true })
+  } catch (e) { res.status(400).json({ error: e.message }) }
+})
+
+// ─── Decorations ───
+r.get('/decorations', async (req, res) => {
+  const list = await prisma.decoration.findMany({ orderBy: { name: 'asc' } })
+  res.json(list)
+})
+
+r.post('/decorations/award', async (req, res) => {
+  try {
+    const { decorationId, userId, reason } = z.object({
+      decorationId: z.string(),
+      userId: z.string(),
+      reason: z.string().optional(),
+    }).parse(req.body)
+
+    const decoration = await prisma.decoration.findUnique({ where: { id: decorationId } })
+    if (!decoration) return res.status(404).json({ error: 'Decorazione non trovata' })
+
+    const award = await prisma.decorationAward.create({
+      data: { decorationId, userId, reason },
+    })
+
+    // Service log entry
+    await prisma.serviceLogEntry.create({
+      data: {
+        userId,
+        type: 'decoration',
+        title: `Conferimento: ${decoration.name}`,
+        body: reason || decoration.criterion,
+        iconKey: decoration.iconKey,
+      },
+    })
+
+    // Notifica al destinatario
+    await prisma.notification.create({
+      data: {
+        userId,
+        type: 'decoration',
+        title: 'Decorazione conferita',
+        body: decoration.name,
+        url: '/personale',
+      },
+    })
+
+    res.json(award)
+  } catch (e) {
+    if (e.code === 'P2002') return res.status(400).json({ error: 'Decorazione già conferita a questo membro' })
+    res.status(400).json({ error: e.message })
+  }
+})
+
+// ─── Promozioni di grado ───
+r.post('/users/:id/promote', async (req, res) => {
+  try {
+    const { rank, reason } = z.object({
+      rank: z.enum(['Caporale', 'Sergente', 'Capitano', 'Colonnello']),
+      reason: z.string().optional(),
+    }).parse(req.body)
+
+    const user = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { rank },
+    })
+
+    // Service log
+    await prisma.serviceLogEntry.create({
+      data: {
+        userId: user.id,
+        type: 'promotion',
+        title: `Promozione a ${rank}`,
+        body: reason || `Avanzamento al grado di ${rank} disposto dal Comando.`,
+        iconKey: 'rank',
+      },
+    })
+
+    // Cerimonia pending
+    await prisma.ceremony.create({
+      data: {
+        userId: user.id,
+        type: 'promotion',
+        payload: { rank, reason: reason || null },
+      },
+    })
+
+    // Notifica
+    await prisma.notification.create({
+      data: {
+        userId: user.id,
+        type: 'promotion',
+        title: 'Promozione disposta',
+        body: `Il Comando ha disposto il Suo avanzamento al grado di ${rank}.`,
+        url: '/dashboard',
+      },
+    })
+
+    res.json({ ok: true, user })
+  } catch (e) { res.status(400).json({ error: e.message }) }
+})
+
+// ─── Service log entry manuale ───
+r.post('/users/:id/log', async (req, res) => {
+  try {
+    const data = z.object({
+      type: z.string().default('note'),
+      title: z.string(),
+      body: z.string().optional(),
+      iconKey: z.string().default('note'),
+    }).parse(req.body)
+    const entry = await prisma.serviceLogEntry.create({
+      data: { ...data, userId: req.params.id },
+    })
+    res.json(entry)
+  } catch (e) { res.status(400).json({ error: e.message }) }
+})
+
+// ─── Admin: forza 2FA email per un utente ───
+r.post('/users/:id/email-2fa', async (req, res) => {
+  try {
+    const { enabled } = z.object({ enabled: z.boolean() }).parse(req.body)
+    const user = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { email2faEnabled: enabled, email2faCode: null, email2faExpiry: null },
+    })
+    // Notifica all'utente
+    await prisma.notification.create({
+      data: {
+        userId: user.id,
+        type: 'security',
+        title: enabled ? 'Verifica via email attivata' : 'Verifica via email disattivata',
+        body: enabled ? 'Il Comando ha attivato la verifica via email sul tuo account. Al prossimo accesso riceverai un codice.' : 'La verifica via email è stata disattivata.',
+        url: '/sicurezza-accesso',
+      },
+    }).catch(() => {})
+    await prisma.serviceLogEntry.create({
+      data: {
+        userId: user.id,
+        type: 'security',
+        title: enabled ? 'Verifica email attivata dal Comando' : 'Verifica email disattivata dal Comando',
+        body: enabled ? 'Verifica in due passaggi imposta come obbligatoria.' : 'Verifica in due passaggi rimossa.',
+        iconKey: '🔒',
+      },
+    }).catch(() => {})
+    res.json({ ok: true })
+  } catch (e) { res.status(400).json({ error: e.message }) }
+})
+
+// ─── Documenti admin ───
+r.get('/users/:id/documents', async (req, res) => {
+  const docs = await prisma.document.findMany({
+    where: { userId: req.params.id },
+    orderBy: { uploadedAt: 'desc' },
+  })
+  res.json(docs)
+})
+
+r.post('/users/:id/documents', async (req, res) => {
+  try {
+    const data = z.object({
+      category: z.string().default('contract'),
+      title: z.string().min(2),
+      description: z.string().optional(),
+      fileUrl: z.string().optional(),
+    }).parse(req.body)
+
+    const doc = await prisma.document.create({
+      data: { ...data, userId: req.params.id, uploadedBy: req.user.id },
+    })
+
+    await prisma.notification.create({
+      data: {
+        userId: req.params.id,
+        type: 'document',
+        title: 'Nuovo documento disponibile',
+        body: doc.title,
+        url: '/documenti',
+      },
+    }).catch(() => {})
+
+    res.json(doc)
+  } catch (e) { res.status(400).json({ error: e.message }) }
+})
+
+r.delete('/documents/:id', async (req, res) => {
+  try {
+    await prisma.document.delete({ where: { id: req.params.id } })
+    res.json({ ok: true })
+  } catch (e) { res.status(400).json({ error: e.message }) }
+})
+
+// ─── Coupon ───
+r.get('/coupons', async (req, res) => {
+  const list = await prisma.coupon.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: { _count: { select: { redemptions: true } } },
+  })
+  res.json(list)
+})
+
+r.post('/coupons', async (req, res) => {
+  try {
+    const data = z.object({
+      code: z.string().min(3).max(32),
+      description: z.string().optional(),
+      discountType: z.enum(['percent', 'fixed']).default('percent'),
+      discountValue: z.number().positive(),
+      maxUses: z.number().int().positive().optional(),
+      validUntil: z.string().optional(),
+      programId: z.string().optional(),
+      active: z.boolean().default(true),
+    }).parse(req.body)
+    const coupon = await prisma.coupon.create({
+      data: {
+        ...data,
+        code: data.code.toUpperCase().trim(),
+        validUntil: data.validUntil ? new Date(data.validUntil) : null,
+        createdBy: req.user.id,
+      },
+    })
+    res.json(coupon)
+  } catch (e) {
+    if (e.code === 'P2002') return res.status(400).json({ error: 'Codice già esistente.' })
+    res.status(400).json({ error: e.message })
+  }
+})
+
+r.patch('/coupons/:id', async (req, res) => {
+  try {
+    const data = z.object({
+      description: z.string().optional(),
+      active: z.boolean().optional(),
+      maxUses: z.number().int().positive().nullable().optional(),
+      validUntil: z.string().nullable().optional(),
+    }).parse(req.body)
+    const update = { ...data }
+    if (data.validUntil !== undefined) update.validUntil = data.validUntil ? new Date(data.validUntil) : null
+    const coupon = await prisma.coupon.update({ where: { id: req.params.id }, data: update })
+    res.json(coupon)
+  } catch (e) { res.status(400).json({ error: e.message }) }
+})
+
+r.delete('/coupons/:id', async (req, res) => {
+  try {
+    await prisma.coupon.delete({ where: { id: req.params.id } })
+    res.json({ ok: true })
+  } catch (e) { res.status(400).json({ error: e.message }) }
+})
+
+r.get('/coupons/:id/redemptions', async (req, res) => {
+  const reds = await prisma.couponRedemption.findMany({
+    where: { couponId: req.params.id },
+    orderBy: { redeemedAt: 'desc' },
+  })
+  // Manual join con users
+  const userIds = [...new Set(reds.map(r => r.userId))]
+  const users = await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, name: true, email: true } })
+  const map = Object.fromEntries(users.map(u => [u.id, u]))
+  res.json(reds.map(r => ({ ...r, user: map[r.userId] })))
+})
+
+// ─── Audit Log esposto ───
+r.get('/audit-log', async (req, res) => {
+  const logs = await prisma.auditLog.findMany({
+    orderBy: { createdAt: 'desc' },
+    take: 200,
+    include: { actor: { select: { id: true, name: true, email: true } } },
+  })
+  res.json(logs)
+})
+
+// ─── Analytics organico ───
+r.get('/analytics', async (req, res) => {
+  const since = new Date(Date.now() - 365 * 86400000)
+
+  // Crescita mensile organico
+  const users = await prisma.user.findMany({
+    where: { role: 'TRADER', approved: true, approvedAt: { gte: since } },
+    select: { approvedAt: true, rank: true },
+  })
+  const growthMap = {}
+  for (const u of users) {
+    if (!u.approvedAt) continue
+    const k = `${u.approvedAt.getFullYear()}-${String(u.approvedAt.getMonth() + 1).padStart(2, '0')}`
+    growthMap[k] = (growthMap[k] || 0) + 1
+  }
+  const growth = Object.entries(growthMap).sort().map(([month, count]) => ({ month, count }))
+
+  // Briefing per mese
+  const briefings = await prisma.briefing.findMany({
+    where: { publishedAt: { gte: since } },
+    select: { publishedAt: true, type: true },
+  })
+  const briefMap = {}
+  for (const b of briefings) {
+    const k = `${b.publishedAt.getFullYear()}-${String(b.publishedAt.getMonth() + 1).padStart(2, '0')}`
+    briefMap[k] = (briefMap[k] || 0) + 1
+  }
+  const briefingsPerMonth = Object.entries(briefMap).sort().map(([month, count]) => ({ month, count }))
+
+  // Decorazioni conferite
+  const decoCount = await prisma.decorationAward.count({ where: { awardedAt: { gte: since } } })
+  // Per tipo
+  const decoByType = await prisma.decorationAward.findMany({
+    where: { awardedAt: { gte: since } },
+    include: { decoration: { select: { name: true, slug: true } } },
+  })
+  const decoBySlug = {}
+  for (const d of decoByType) {
+    decoBySlug[d.decoration.slug] = (decoBySlug[d.decoration.slug] || 0) + 1
+  }
+
+  // Stats correnti
+  const allActive = await prisma.user.findMany({
+    where: { role: 'TRADER', approved: true },
+    select: { rank: true, enlistedAt: true },
+  })
+  const totals = { Caporale: 0, Sergente: 0, Capitano: 0, Colonnello: 0 }
+  let totalDays = 0
+  for (const u of allActive) {
+    totals[u.rank] = (totals[u.rank] || 0) + 1
+    if (u.enlistedAt) totalDays += Math.floor((Date.now() - u.enlistedAt.getTime()) / 86400000)
+  }
+  const avgAnzianita = allActive.length > 0 ? Math.round(totalDays / allActive.length) : 0
+
+  // Coupon usage
+  const coupons = await prisma.coupon.findMany({
+    include: { _count: { select: { redemptions: true } } },
+    orderBy: { usedCount: 'desc' },
+    take: 10,
+  })
+
+  res.json({
+    growth,
+    briefingsPerMonth,
+    decorations: { total: decoCount, bySlug: decoBySlug },
+    organico: { totale: allActive.length, byRank: totals, avgAnzianita },
+    topCoupons: coupons.map(c => ({ code: c.code, used: c.usedCount, max: c.maxUses })),
+  })
+})
+
+// ─── Export Albo (JSON, da convertire in CSV lato client) ───
+r.get('/export-albo', async (req, res) => {
+  const users = await prisma.user.findMany({
+    where: { role: 'TRADER', approved: true },
+    select: {
+      matricola: true, name: true, email: true, rank: true,
+      enlistedAt: true, approvedAt: true, kycVerifiedAt: true,
+      email2faEnabled: true, showInAlbo: true,
+      _count: { select: { decorations: true, propAccounts: true } },
+    },
+    orderBy: { enlistedAt: 'asc' },
+  })
+  res.json(users.map(u => ({
+    matricola: u.matricola || '—',
+    nome: u.name,
+    email: u.email,
+    grado: u.rank,
+    arruolato: u.enlistedAt ? u.enlistedAt.toISOString().slice(0, 10) : '—',
+    anzianita: u.enlistedAt ? Math.floor((Date.now() - u.enlistedAt.getTime()) / 86400000) : 0,
+    kyc: u.kycVerifiedAt ? 'sì' : 'no',
+    twoFA: u.email2faEnabled ? 'sì' : 'no',
+    visibile: u.showInAlbo ? 'sì' : 'no',
+    decorazioni: u._count.decorations,
+    accounts: u._count.propAccounts,
+  })))
 })
 
 export default r

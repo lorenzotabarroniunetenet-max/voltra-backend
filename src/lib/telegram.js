@@ -30,14 +30,16 @@ export async function notifyPayoutRequest({ user, account, program, amount, netw
   )
 }
 
-export async function notifyPurchaseReceipt({ user, program, receiptUrl }) {
+export async function notifyPurchaseReceipt({ user, program, receiptUrl, network, coupon }) {
   await notifyAdmin(
-    `🛒 *Nuovo Acquisto*\n\n` +
-    `Trader: ${user.name} (${user.email})\n` +
-    `Programma: ${program.name}\n` +
-    `Importo: $${program.priceUsd}\n` +
-    (receiptUrl ? `Ricevuta: ${receiptUrl}\n` : 'Nessuna ricevuta caricata\n') +
-    `\n[Attiva account](https://voltrasolutions.com/admin)`
+    `🎖 *Nuova Richiesta Grado*\n\n` +
+    `Membro: ${user.name} (${user.email})\n` +
+    `Grado: *${program.name}*\n` +
+    `Quota: $${program.priceUsd}\n` +
+    (coupon ? `Coupon: \`${coupon}\`\n` : '') +
+    (network ? `Network: ${network}\n` : '') +
+    (receiptUrl ? `TxHash: \`${receiptUrl}\`\n` : '⚠️ Nessuna TxHash\n') +
+    `\n[Apri Stato Maggiore](https://voltrasolutions.com/admin)`
   )
 }
 
