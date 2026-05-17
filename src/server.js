@@ -7,6 +7,7 @@ import adminRoutes from './routes/admin.js'
 import purchaseRoutes from './routes/purchase.js'
 import contactRoutes from './routes/contact.js'
 import membriRoutes from './routes/membri.js'
+import aiRoutes from './routes/ai.js'
 
 const app = express()
 app.set('trust proxy', 1)
@@ -31,6 +32,7 @@ app.use('/api/admin', adminRoutes)
 app.use('/api/purchase', purchaseRoutes)
 app.use('/api/contact', contactRoutes)
 app.use('/api/membri', membriRoutes)
+app.use('/api/ai', aiRoutes)
 
 app.use((err, req, res, next) => {
   console.error('[error]', err)
