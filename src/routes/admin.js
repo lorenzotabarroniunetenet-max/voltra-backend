@@ -285,7 +285,7 @@ r.get('/users/:id', async (req, res) => {
           orderBy: { createdAt: 'desc' },
         },
         serviceLog: {
-          orderBy: { createdAt: 'desc' },
+          orderBy: { occurredAt: 'desc' },
           take: 50,
         },
         decorations: {
@@ -389,7 +389,8 @@ async function approveOrderLogic(orderId, decidedBy) {
       userId: order.userId,
       type: 'promotion',
       title: `Promosso a ${order.programName}`,
-      description: `Versamento ${order.amount} ${order.currency} verificato. Approvato dal Comando.`,
+      body: `Versamento ${order.amount} ${order.currency} verificato. Approvato dal Comando.`,
+      iconKey: 'star',
     },
   }).catch(() => {})
 
@@ -417,7 +418,8 @@ r.post('/orders/:id/reject', async (req, res) => {
         userId: order.userId,
         type: 'note',
         title: `Richiesta ${order.programName} rifiutata`,
-        description: 'Versamento non verificato dal Comando.',
+        body: 'Versamento non verificato dal Comando.',
+        iconKey: 'shield',
       },
     }).catch(() => {})
     res.json({ message: 'Ordine rifiutato.' })

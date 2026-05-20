@@ -140,7 +140,8 @@ r.post('/request', requireAuth, async (req, res) => {
           userId: req.user.id,
           type: 'purchase',
           title: `Richiesta promozione — ${program.name}`,
-          description: txHash ? `TxHash: ${txHash} · In attesa di verifica` : 'In attesa di verifica',
+          body: txHash ? `TxHash: ${txHash} · In attesa di verifica` : 'In attesa di verifica',
+          iconKey: 'star',
         },
       })
     } catch (e) {}
@@ -217,7 +218,8 @@ r.post('/approve/:id', async (req, res) => {
         userId: order.userId,
         type: 'promotion',
         title: `Promosso a ${order.programName}`,
-        description: `Versamento ${order.amount} ${order.currency} verificato. Approvato dal Comando.`,
+        body: `Versamento ${order.amount} ${order.currency} verificato. Approvato dal Comando.`,
+        iconKey: 'star',
       },
     }).catch(() => {})
 
