@@ -1,9 +1,10 @@
 import { Router } from 'express'
 import { z } from 'zod'
+import crypto from 'crypto'
 import { prisma } from '../lib/prisma.js'
 import { requireAuth } from '../lib/middleware.js'
 import { getSetting } from '../lib/settings.js'
-import { notifyPurchaseReceipt } from '../lib/telegram.js'
+import { notifyPurchaseReceipt, notifyOrderApproval } from '../lib/telegram.js'
 
 const r = Router()
 
@@ -86,11 +87,12 @@ r.post('/validate-coupon', requireAuth, async (req, res) => {
 
 r.post('/request', requireAuth, async (req, res) => {
   try {
-    const { programId, network, txHash, couponCode } = z.object({
+    const { programId, network, txHash, couponCode, receiptUrl } = z.object({
       programId: z.string(),
       network: z.string().optional(),
       txHash: z.string().optional(),
       couponCode: z.string().optional(),
+      receiptUrl: z.string().optional(),
     }).parse(req.body)
 
     const program = await prisma.program.findUnique({ where: { id: programId } })
@@ -102,12 +104,7 @@ r.post('/request', requireAuth, async (req, res) => {
       if (coupon && coupon.active) {
         try {
           await prisma.couponRedemption.create({
-            data: {
-              couponId: coupon.id,
-              userId: req.user.id,
-              programId,
-              amountOff: 0,
-            },
+            data: { couponId: coupon.id, userId: req.user.id, programId, amountOff: 0 },
           })
           await prisma.coupon.update({
             where: { id: coupon.id },
@@ -118,30 +115,113 @@ r.post('/request', requireAuth, async (req, res) => {
       }
     }
 
-    // Incrementa il contatore operazioni del membro
-    const updatedUser = await prisma.user.update({
-      where: { id: req.user.id },
-      data: { purchaseCount: { increment: 1 } },
+    // Crea Order in stato PENDING con token di approvazione univoco
+    const approvalToken = crypto.randomBytes(24).toString('hex')
+    const order = await prisma.order.create({
+      data: {
+        userId: req.user.id,
+        programId,
+        programName: program.name,
+        amount: Number(program.priceUsd || 0),
+        currency: 'USDT',
+        network: network || null,
+        txHash: txHash || null,
+        receiptUrl: receiptUrl || null,
+        couponCode: couponInfo,
+        status: 'PENDING',
+        approvalToken,
+      },
     })
 
-    // Crea entry nel registro di servizio
+    // Entry registro di servizio
     try {
       await prisma.serviceLogEntry.create({
         data: {
           userId: req.user.id,
           type: 'purchase',
-          title: `Operazione conclusa — ${program.name}`,
-          description: txHash ? `TxHash: ${txHash}` : null,
+          title: `Richiesta promozione — ${program.name}`,
+          description: txHash ? `TxHash: ${txHash} · In attesa di verifica` : 'In attesa di verifica',
         },
       })
     } catch (e) {}
 
-    notifyPurchaseReceipt({ user: req.user, program, receiptUrl: txHash, network, coupon: couponInfo, purchaseCount: updatedUser.purchaseCount }).catch(() => {})
+    // Notifica Telegram con link approvazione diretto
+    const base = process.env.PUBLIC_URL || 'https://voltrasolutions.com'
+    const approveUrl = `${base}/admin/approva/${order.id}?token=${approvalToken}`
+    const profileUrl = `${base}/admin/utente/${req.user.id}`
+    notifyOrderApproval({
+      user: req.user,
+      order,
+      approveUrl,
+      profileUrl,
+    }).catch(() => {})
 
     res.json({
       message: 'Richiesta trasmessa al Comando. Verifica del pagamento entro 24 ore.',
-      purchaseCount: updatedUser.purchaseCount,
+      orderId: order.id,
+      status: 'PENDING',
     })
+  } catch (e) { res.status(400).json({ error: e.message }) }
+})
+
+// Stato ordine per l'utente (pagina "in attesa")
+r.get('/order/:id', requireAuth, async (req, res) => {
+  const order = await prisma.order.findUnique({ where: { id: req.params.id } })
+  if (!order || order.userId !== req.user.id) return res.status(404).json({ error: 'Ordine non trovato' })
+  res.json({
+    id: order.id,
+    programName: order.programName,
+    amount: order.amount,
+    currency: order.currency,
+    network: order.network,
+    status: order.status,
+    createdAt: order.createdAt,
+  })
+})
+
+// Approvazione rapida via token (link Telegram) — verifica ordine + token
+r.get('/approve-info/:id', async (req, res) => {
+  const { token } = req.query
+  const order = await prisma.order.findUnique({
+    where: { id: req.params.id },
+    include: { user: { select: { name: true, email: true, matricola: true, rank: true } } },
+  })
+  if (!order || !token || order.approvalToken !== token) {
+    return res.status(403).json({ error: 'Link non valido o scaduto' })
+  }
+  res.json({ order })
+})
+
+r.post('/approve/:id', async (req, res) => {
+  try {
+    const { token } = z.object({ token: z.string() }).parse(req.body)
+    const order = await prisma.order.findUnique({ where: { id: req.params.id } })
+    if (!order || order.approvalToken !== token) {
+      return res.status(403).json({ error: 'Link non valido' })
+    }
+    if (order.status !== 'PENDING') {
+      return res.status(400).json({ error: 'Ordine già processato', status: order.status })
+    }
+
+    const program = await prisma.program.findUnique({ where: { id: order.programId } })
+    await prisma.user.update({
+      where: { id: order.userId },
+      data: { rank: program?.name || order.programName, purchaseCount: { increment: 1 } },
+    })
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { status: 'APPROVED', decidedAt: new Date(), decidedBy: 'telegram', approvalToken: null },
+    })
+    await prisma.serviceLogEntry.create({
+      data: {
+        userId: order.userId,
+        type: 'promotion',
+        title: `Promosso a ${order.programName}`,
+        description: `Versamento ${order.amount} ${order.currency} verificato. Approvato dal Comando.`,
+      },
+    }).catch(() => {})
+
+    res.json({ message: 'Promozione approvata. Grado attivato.', programName: order.programName })
   } catch (e) { res.status(400).json({ error: e.message }) }
 })
 

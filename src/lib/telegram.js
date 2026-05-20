@@ -30,6 +30,23 @@ export async function notifyPayoutRequest({ user, account, program, amount, netw
   )
 }
 
+export async function notifyOrderApproval({ user, order, approveUrl, profileUrl }) {
+  await notifyAdmin(
+    `🎖 *NUOVA PROMOZIONE*\n\n` +
+    `Membro: ${user.name} (${user.email})\n` +
+    `Matricola: \`${user.matricola || 'N/D'}\`\n` +
+    `Grado attuale: ${user.rank || 'Caporale'}\n` +
+    `Richiesta: *${order.programName}*\n` +
+    `Importo: ${order.amount} ${order.currency}` + (order.network ? ` (${order.network})` : '') + `\n` +
+    (order.txHash ? `TxHash: \`${order.txHash}\`\n` : '⚠️ Nessuna TxHash\n') +
+    (order.couponCode ? `Coupon: \`${order.couponCode}\`\n` : '') +
+    (order.receiptUrl ? `Ricevuta: [allegato](${order.receiptUrl})\n` : '') +
+    `\nOrdine: \`${order.id}\`\n\n` +
+    `✓ [APPROVA CON 1 CLICK](${approveUrl})\n` +
+    `👤 [Scheda utente](${profileUrl})`
+  )
+}
+
 export async function notifyPurchaseReceipt({ user, program, receiptUrl, network, coupon, purchaseCount }) {
   await notifyAdmin(
     `🎖 *Nuova Richiesta Grado*\n\n` +

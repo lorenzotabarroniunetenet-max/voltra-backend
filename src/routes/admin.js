@@ -280,6 +280,17 @@ r.get('/users/:id', async (req, res) => {
         include: { account: { include: { program: true } } },
         orderBy: { requestedAt: 'desc' },
       },
+      orders: {
+        orderBy: { createdAt: 'desc' },
+      },
+      serviceLog: {
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      },
+      decorations: {
+        include: { decoration: true },
+        orderBy: { awardedAt: 'desc' },
+      },
     },
   })
   if (!user) return res.status(404).json({ error: 'User not found' })
@@ -318,6 +329,93 @@ r.post('/users/:id/set-purchases', async (req, res) => {
       select: { purchaseCount: true },
     })
     res.json(user)
+  } catch (e) { res.status(400).json({ error: e.message }) }
+})
+
+// ── Orders (promozioni in attesa di approvazione) ──
+r.get('/orders', async (req, res) => {
+  const { status } = req.query
+  const orders = await prisma.order.findMany({
+    where: status ? { status } : undefined,
+    orderBy: { createdAt: 'desc' },
+    include: {
+      user: { select: { id: true, name: true, email: true, matricola: true, rank: true } },
+    },
+  })
+  res.json(orders)
+})
+
+r.get('/orders/:id', async (req, res) => {
+  const order = await prisma.order.findUnique({
+    where: { id: req.params.id },
+    include: {
+      user: { select: { id: true, name: true, email: true, matricola: true, rank: true } },
+    },
+  })
+  if (!order) return res.status(404).json({ error: 'Ordine non trovato' })
+  res.json(order)
+})
+
+async function approveOrderLogic(orderId, decidedBy) {
+  const order = await prisma.order.findUnique({ where: { id: orderId } })
+  if (!order) throw new Error('Ordine non trovato')
+  if (order.status !== 'PENDING') throw new Error('Ordine già processato')
+
+  const program = await prisma.program.findUnique({ where: { id: order.programId } })
+
+  // Promuovi il membro al grado richiesto
+  await prisma.user.update({
+    where: { id: order.userId },
+    data: {
+      rank: program?.name || order.programName,
+      purchaseCount: { increment: 1 },
+    },
+  })
+
+  // Aggiorna ordine
+  await prisma.order.update({
+    where: { id: orderId },
+    data: { status: 'APPROVED', decidedAt: new Date(), decidedBy: decidedBy || 'admin' },
+  })
+
+  // Entry registro di servizio
+  await prisma.serviceLogEntry.create({
+    data: {
+      userId: order.userId,
+      type: 'promotion',
+      title: `Promosso a ${order.programName}`,
+      description: `Versamento ${order.amount} ${order.currency} verificato. Approvato dal Comando.`,
+    },
+  }).catch(() => {})
+
+  return order
+}
+
+r.post('/orders/:id/approve', async (req, res) => {
+  try {
+    await approveOrderLogic(req.params.id, req.user?.email)
+    res.json({ message: 'Promozione approvata e grado attivato.' })
+  } catch (e) { res.status(400).json({ error: e.message }) }
+})
+
+r.post('/orders/:id/reject', async (req, res) => {
+  try {
+    const order = await prisma.order.findUnique({ where: { id: req.params.id } })
+    if (!order) return res.status(404).json({ error: 'Ordine non trovato' })
+    if (order.status !== 'PENDING') return res.status(400).json({ error: 'Ordine già processato' })
+    await prisma.order.update({
+      where: { id: req.params.id },
+      data: { status: 'REJECTED', decidedAt: new Date(), decidedBy: req.user?.email || 'admin' },
+    })
+    await prisma.serviceLogEntry.create({
+      data: {
+        userId: order.userId,
+        type: 'note',
+        title: `Richiesta ${order.programName} rifiutata`,
+        description: 'Versamento non verificato dal Comando.',
+      },
+    }).catch(() => {})
+    res.json({ message: 'Ordine rifiutato.' })
   } catch (e) { res.status(400).json({ error: e.message }) }
 })
 

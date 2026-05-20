@@ -85,6 +85,7 @@ model User {
   notifications     Notification[]
   ceremonies        Ceremony[]
   documents         Document[]
+  orders            Order[]      @relation("userOrders")
 }
 
 model Document {
@@ -304,4 +305,31 @@ model Setting {
   value     String
   isPublic  Boolean  @default(false)
   updatedAt DateTime @updatedAt
+}
+
+model Order {
+  id            String       @id @default(cuid())
+  userId        String
+  user          User         @relation("userOrders", fields: [userId], references: [id], onDelete: Cascade)
+  programId     String
+  programName   String
+  amount        Float
+  currency      String       @default("USDT")
+  network       String?
+  txHash        String?
+  receiptUrl    String?
+  couponCode    String?
+  status        OrderStatus  @default(PENDING)
+  approvalToken String?      @unique
+  createdAt     DateTime     @default(now())
+  decidedAt     DateTime?
+  decidedBy     String?
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+enum OrderStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
