@@ -7,12 +7,24 @@ export async function notifyAdmin(text) {
     console.warn('[telegram] missing token or chat ID')
     return
   }
+  const url = `https://api.telegram.org/bot${token}/sendMessage`
   try {
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    // Primo tentativo con Markdown
+    const r = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' }),
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown', disable_web_page_preview: true }),
     })
+    if (!r.ok) {
+      const body = await r.text().catch(() => '')
+      console.warn('[telegram] markdown failed, retrying plain:', r.status, body)
+      // Secondo tentativo senza parse_mode (testo semplice, sempre accettato)
+      await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text: text.replace(/[*`\[\]()]/g, ''), disable_web_page_preview: true }),
+      })
+    }
   } catch (e) {
     console.error('[telegram] send failed:', e.message)
   }

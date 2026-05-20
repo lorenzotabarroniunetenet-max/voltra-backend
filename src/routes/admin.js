@@ -261,40 +261,45 @@ r.post('/users/:id/revoke', async (req, res) => {
 
 // User detail with EVERYTHING
 r.get('/users/:id', async (req, res) => {
-  const user = await prisma.user.findUnique({
-    where: { id: req.params.id },
-    select: {
-      id: true, name: true, email: true, role: true, emailVerified: true,
-      kycVerifiedAt: true, telegramChatId: true, notes: true, createdAt: true,
-      rank: true, matricola: true, enlistedAt: true, approved: true, approvedAt: true,
-      email2faEnabled: true, purchaseCount: true,
-      propAccounts: {
-        include: {
-          program: true,
-          snapshots: { orderBy: { date: 'desc' }, take: 30 },
-          _count: { select: { snapshots: true } },
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      select: {
+        id: true, name: true, email: true, role: true, emailVerified: true,
+        kycVerifiedAt: true, telegramChatId: true, notes: true, createdAt: true,
+        rank: true, matricola: true, enlistedAt: true, approved: true, approvedAt: true,
+        email2faEnabled: true, purchaseCount: true,
+        propAccounts: {
+          include: {
+            program: true,
+            snapshots: { orderBy: { date: 'desc' }, take: 30 },
+            _count: { select: { snapshots: true } },
+          },
+          orderBy: { startedAt: 'desc' },
         },
-        orderBy: { startedAt: 'desc' },
+        payoutRequests: {
+          include: { account: { include: { program: true } } },
+          orderBy: { requestedAt: 'desc' },
+        },
+        orders: {
+          orderBy: { createdAt: 'desc' },
+        },
+        serviceLog: {
+          orderBy: { createdAt: 'desc' },
+          take: 50,
+        },
+        decorations: {
+          include: { decoration: true },
+          orderBy: { awardedAt: 'desc' },
+        },
       },
-      payoutRequests: {
-        include: { account: { include: { program: true } } },
-        orderBy: { requestedAt: 'desc' },
-      },
-      orders: {
-        orderBy: { createdAt: 'desc' },
-      },
-      serviceLog: {
-        orderBy: { createdAt: 'desc' },
-        take: 50,
-      },
-      decorations: {
-        include: { decoration: true },
-        orderBy: { awardedAt: 'desc' },
-      },
-    },
-  })
-  if (!user) return res.status(404).json({ error: 'User not found' })
-  res.json(user)
+    })
+    if (!user) return res.status(404).json({ error: 'User not found' })
+    res.json(user)
+  } catch (e) {
+    console.error('[admin/users/:id]', e.message)
+    res.status(500).json({ error: e.message })
+  }
 })
 
 r.patch('/users/:id', async (req, res) => {
