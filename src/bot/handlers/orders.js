@@ -144,8 +144,7 @@ export async function handleOrderConfirm(ctx, action, orderId) {
 }
 
 // Conversation: rifiuto con motivo
-export async function rejectOrderReasonConvo(conversation, ctx) {
-  const { orderId } = conversation.arg ?? {}
+export async function rejectOrderReasonConvo(conversation, ctx, orderId) {
   if (!orderId) { await ctx.reply('Errore: ordine non specificato.'); return }
 
   await ctx.reply(

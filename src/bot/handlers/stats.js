@@ -10,7 +10,6 @@ export async function handleStats(ctx) {
   const now = new Date()
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 3600 * 1000)
   const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-  const { prisma } = await import('../../lib/prisma.js')
 
   const [
     revenue30d, totalUsers, linkedUsers, openTickets,
@@ -19,9 +18,9 @@ export async function handleStats(ctx) {
     prisma.order.aggregate({ _sum: { amount: true }, where: { status: 'APPROVED', updatedAt: { gte: thirtyDaysAgo } } }),
     prisma.user.count({ where: { role: 'USER', approved: true } }),
     prisma.user.count({ where: { telegramChatId: { not: null }, role: 'USER' } }),
-    prisma.supportConversation.count({ where: { status: { in: ['OPEN', 'IN_PROGRESS'] } } }),
+    prisma.supportConversation.count({ where: { status: { in: ['OPEN', 'IN_PROGRESS'] } } }).catch(() => 0),
     prisma.supportRating.aggregate({ _avg: { score: true }, _count: true }).catch(() => ({ _avg: { score: null }, _count: 0 })),
-    prisma.propAccount.count({ where: { status: 'PASSED', updatedAt: { gte: firstOfMonth } } }),
+    prisma.propAccount.count({ where: { status: 'PASSED', updatedAt: { gte: firstOfMonth } } }).catch(() => 0),
     prisma.order.count({ where: { status: 'PENDING' } }),
     prisma.propAccount.count({ where: { status: 'ACTIVE' } }),
     prisma.payoutRequest.count({ where: { status: 'PENDING' } }),

@@ -29,7 +29,7 @@ export function buildSupportHandlers(bot, auth) {
   composer.callbackQuery(/^sup:reply:(.+)$/, async (ctx) => {
     if (!(await auth.isMod(ctx))) { await ctx.answerCallbackQuery({ text: '⛔ Accesso negato', show_alert: true }); return }
     await ctx.answerCallbackQuery({ text: 'Scrivi la tua risposta…' }).catch(() => {})
-    await ctx.conversation.enter('supportReply', { convId: ctx.match[1] })
+    await ctx.conversation.enter('supportReply', ctx.match[1])
   })
 
   composer.callbackQuery(/^sup:close:(.+)$/, async (ctx) => {
@@ -78,8 +78,7 @@ export function buildSupportHandlers(bot, auth) {
   return composer
 }
 
-export async function supportReplyConvo(conversation, ctx) {
-  const { convId } = conversation.arg ?? {}
+export async function supportReplyConvo(conversation, ctx, convId) {
   if (!convId) { await ctx.reply('Errore: conversazione non specificata.'); return }
 
   const conv = await conversation.external(() =>

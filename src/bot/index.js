@@ -129,7 +129,7 @@ if (bot) {
     if ((m = data.match(/^v1:o:rej:start:(.+)$/))) {
       if (!(await isMod(ctx))) { await ctx.answerCallbackQuery({ text: '⛔', show_alert: true }); return }
       await ctx.answerCallbackQuery()
-      await ctx.conversation.enter('rejectOrderReason', { orderId: m[1] })
+      await ctx.conversation.enter('rejectOrderReason', m[1])
       return
     }
     if ((m = data.match(/^v1:o:conf:(apr|rej):(.+)$/))) { if (!(await isMod(ctx))) { await ctx.answerCallbackQuery({ text: '⛔', show_alert: true }); return } await handleOrderConfirm(ctx, m[1], m[2]); return }
@@ -158,7 +158,7 @@ if (bot) {
       await ctx.answerCallbackQuery()
       const user = await prisma.user.findUnique({ where: { id: m[1] }, select: { name: true, telegramChatId: true } })
       if (!user?.telegramChatId) { await ctx.editMessageText('⚠️ Telegram non collegato.', { reply_markup: new InlineKeyboard().text('← Indietro', 'v1:sec:members') }); return }
-      await ctx.conversation.enter('sendDirectMessage', { targetChatId: user.telegramChatId, targetName: user.name })
+      await ctx.conversation.enter('sendDirectMessage')
       return
     }
 
@@ -237,21 +237,28 @@ function buildAdminHomeKb() {
 
 async function handleMembersList(ctx) {
   await ctx.answerCallbackQuery()
-  const members = await prisma.user.findMany({
-    where: { role: 'USER', approved: true },
-    orderBy: { createdAt: 'desc' }, take: 10,
-    select: { id: true, name: true, rank: true, matricola: true },
-  })
-  const total = await prisma.user.count({ where: { role: 'USER', approved: true } })
-  const kb = new InlineKeyboard()
-  for (const m of members) {
-    kb.text(`${m.name} · ${m.rank || 'Recluta'}`.substring(0, 40), `v1:mem:view:${m.id}`).row()
+  try {
+    const members = await prisma.user.findMany({
+      where: { role: 'USER', approved: true },
+      orderBy: { createdAt: 'desc' }, take: 10,
+      select: { id: true, name: true, rank: true, matricola: true },
+    })
+    const total = await prisma.user.count({ where: { role: 'USER', approved: true } })
+    const kb = new InlineKeyboard()
+    for (const m of members) {
+      kb.text(`${m.name} · ${m.rank || 'Recluta'}`.substring(0, 40), `v1:mem:view:${m.id}`).row()
+    }
+    kb.text('← Home', 'v1:home')
+    await ctx.editMessageText(
+      total === 0
+        ? '👥 <b>Membri</b>\n\nNessun membro approvato.'
+        : `👥 <b>Membri</b> (${total})\n\nPrimi ${members.length} mostrati:`,
+      { parse_mode: 'HTML', reply_markup: kb }
+    )
+  } catch (e) {
+    console.error('[bot/members]', e.message)
+    await ctx.editMessageText(`⚠️ Errore: ${e.message}`, { reply_markup: new InlineKeyboard().text('← Home', 'v1:home') })
   }
-  kb.text('← Home', 'v1:home')
-  await ctx.editMessageText(
-    `👥 <b>Membri</b> (${total})\n\nPrimi ${members.length} mostrati:`,
-    { parse_mode: 'HTML', reply_markup: kb }
-  )
 }
 
 async function handleMemberView(ctx, userId) {
