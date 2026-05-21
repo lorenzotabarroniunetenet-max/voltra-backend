@@ -45,17 +45,30 @@ const port = process.env.PORT || 4000
 app.listen(port, () => {
   console.log(`Voltra backend on :${port}`)
   // Avvia bot in long polling (non-blocking)
+  // Avvia bot in long polling con retry su 409 (Render rolling deploy)
   import('./bot/index.js').then(({ bot }) => {
-    if (bot) {
-      bot.start({
-        allowed_updates: ['message', 'callback_query'],
-        drop_pending_updates: false,
-        onStart: (info) => console.log(`[bot] @${info.username} polling`),
-      })
-      // Avvia cron notifiche
-      import('./cron/notifications.js').then(({ startNotificationCrons }) => {
-        startNotificationCrons(bot)
-      }).catch(e => console.error('[cron] start error:', e.message))
+    if (!bot) return
+    const startBot = async (attempt = 1) => {
+      try {
+        await bot.start({
+          allowed_updates: ['message', 'callback_query'],
+          drop_pending_updates: false,
+          onStart: (info) => console.log(`[bot] @${info.username} polling`),
+        })
+      } catch (e) {
+        if (e.error_code === 409) {
+          const wait = attempt * 5000
+          console.log(`[bot] 409 conflict, retry in ${wait/1000}s (attempt ${attempt})`)
+          setTimeout(() => startBot(attempt + 1), wait)
+        } else {
+          console.error('[bot] start error:', e.message)
+        }
+      }
     }
-  }).catch(e => console.error('[bot] start error:', e.message))
+    startBot()
+    // Avvia cron notifiche
+    import('./cron/notifications.js').then(({ startNotificationCrons }) => {
+      startNotificationCrons(bot)
+    }).catch(e => console.error('[cron] start error:', e.message))
+  }).catch(e => console.error('[bot] import error:', e.message))
 })
