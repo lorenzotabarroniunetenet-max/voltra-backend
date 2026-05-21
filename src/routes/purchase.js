@@ -4,7 +4,7 @@ import crypto from 'crypto'
 import { prisma } from '../lib/prisma.js'
 import { requireAuth } from '../lib/middleware.js'
 import { getSetting } from '../lib/settings.js'
-import { notifyPurchaseReceipt, notifyOrderApproval } from '../lib/telegram.js'
+import { notifyPurchaseReceipt, notifyOrderApproval, notifyMember } from '../lib/telegram.js'
 
 const r = Router()
 
@@ -242,6 +242,17 @@ r.post('/approve/:id', async (req, res) => {
         iconKey: 'star',
       },
     }).catch(() => {})
+
+    // Notifica il membro su Telegram se collegato
+    const member = await prisma.user.findUnique({ where: { id: order.userId }, select: { telegramChatId: true, name: true } })
+    if (member?.telegramChatId) {
+      notifyMember(member.telegramChatId,
+        `🎖 <b>Promozione approvata</b>\n\n` +
+        `Complimenti, <b>${member.name}</b>.\n` +
+        `Sei stato promosso a <b>${order.programName}</b>.\n\n` +
+        `La tua missione è ora attiva. Accedi al Quartier Generale su voltrasolutions.com.`
+      ).catch(() => {})
+    }
 
     res.json({ message: 'Promozione approvata. Grado attivato.', programName: order.programName })
   } catch (e) { res.status(400).json({ error: e.message }) }

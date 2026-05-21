@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
+import { notifyMember } from '../lib/telegram.js'
 import { requireAuth, requireAdmin } from '../lib/middleware.js'
 import { getAllSettings, setSetting } from '../lib/settings.js'
 import { sendApprovalEmail } from '../lib/email.js'
@@ -207,6 +208,7 @@ r.post('/users/:id/approve', async (req, res) => {
       data: {
         approved: true,
         approvedAt: now,
+        enrolledAt: now,
         matricola: target.matricola || matricola,
         enlistedAt: target.enlistedAt || now,
         rank: target.rank || 'Caporale',
@@ -412,6 +414,14 @@ async function approveOrderLogic(orderId, decidedBy) {
       iconKey: 'star',
     },
   }).catch(() => {})
+
+  // Notifica membro su Telegram
+  const member = await prisma.user.findUnique({ where: { id: order.userId }, select: { telegramChatId: true, name: true } })
+  if (member?.telegramChatId) {
+    notifyMember(member.telegramChatId,
+      `🎖 <b>Promozione approvata</b>\n\nComplimenti, <b>${member.name}</b>.\nSei stato promosso a <b>${order.programName}</b>.\n\nLa tua missione è ora attiva su voltrasolutions.com.`
+    ).catch(() => {})
+  }
 
   return order
 }
@@ -900,6 +910,28 @@ r.get('/export-albo', async (req, res) => {
     decorazioni: u._count.decorations,
     accounts: u._count.propAccounts,
   })))
+})
+
+// ── Support Tickets ──
+r.get('/tickets', async (req, res) => {
+  const { status } = req.query
+  const tickets = await prisma.supportTicket.findMany({
+    where: status ? { status } : undefined,
+    orderBy: { createdAt: 'desc' },
+    include: { user: { select: { id: true, name: true, email: true, matricola: true } } },
+  })
+  res.json(tickets)
+})
+
+r.patch('/tickets/:id', async (req, res) => {
+  try {
+    const { status } = z.object({ status: z.enum(['OPEN', 'CLOSED', 'IN_PROGRESS']) }).parse(req.body)
+    const ticket = await prisma.supportTicket.update({
+      where: { id: req.params.id },
+      data: { status },
+    })
+    res.json(ticket)
+  } catch (e) { res.status(400).json({ error: e.message }) }
 })
 
 export default r

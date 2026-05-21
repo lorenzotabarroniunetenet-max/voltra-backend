@@ -138,3 +138,32 @@ export async function sendContactEmail({ name, email, subject, message }) {
     await resend.emails.send({ from, to: support, replyTo: email, subject: `[Linea HQ] ${subject || 'Da ' + name}`, html })
   } catch (e) { console.error('[email] contact failed:', e.message) }
 }
+
+export async function sendTicketEmail({ user, category, subject, message }) {
+  if (!resend) { console.warn('[email] RESEND_API_KEY missing'); return }
+  const { from, support } = await getEmailConfig()
+  const catLabel = { pagamento: 'Pagamento', tecnico: 'Tecnico', onorificenze: 'Onorificenze', grado: 'Grado', altro: 'Altro' }
+  const html = `<!DOCTYPE html><html><body style="margin:0;background:#000;font-family:Arial,sans-serif;color:#f0f0f0">
+    <div style="max-width:560px;margin:40px auto;background:#0a0a0a;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:28px">
+      <h1 style="margin:0 0 8px;color:#B4FF39;font-size:18px">🎖 Nuovo Ticket Supporto</h1>
+      <p style="color:#555;font-size:12px;margin:0 0 20px;text-transform:uppercase;letter-spacing:0.08em">${catLabel[category] || category}</p>
+      <table style="width:100%;font-size:14px;line-height:1.8;margin-bottom:20px">
+        <tr><td style="color:#888;width:110px">Membro:</td><td><strong>${user.name}</strong></td></tr>
+        <tr><td style="color:#888">Email:</td><td><a href="mailto:${user.email}" style="color:#B4FF39">${user.email}</a></td></tr>
+        <tr><td style="color:#888">Matricola:</td><td>${user.matricola || 'N/D'}</td></tr>
+        <tr><td style="color:#888">Categoria:</td><td>${catLabel[category] || category}</td></tr>
+        <tr><td style="color:#888">Oggetto:</td><td><strong>${subject}</strong></td></tr>
+      </table>
+      <hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:20px 0">
+      <div style="white-space:pre-wrap;line-height:1.6;color:#cccccc;font-size:14px">${message}</div>
+      <hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:20px 0">
+      <p style="font-size:11px;color:#555;margin:0">Rispondi direttamente a questa email — il membro riceverà la risposta su ${user.email}</p>
+    </div></body></html>`
+  try {
+    await resend.emails.send({
+      from, to: support, replyTo: user.email,
+      subject: `[Ticket ${catLabel[category]?.toUpperCase()}] ${subject}`,
+      html,
+    })
+  } catch (e) { console.error('[email] ticket failed:', e.message) }
+}

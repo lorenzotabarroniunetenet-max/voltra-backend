@@ -2,9 +2,10 @@ import { Router } from 'express'
 import { z } from 'zod'
 import rateLimit from 'express-rate-limit'
 import { getSetting } from '../lib/settings.js'
-import { sendContactEmail } from '../lib/email.js'
+import { sendContactEmail, sendTicketEmail } from '../lib/email.js'
 import { notifyContact, notifySupportTicket } from '../lib/telegram.js'
 import { requireAuth } from '../lib/middleware.js'
+import { prisma } from '../lib/prisma.js'
 
 const r = Router()
 
@@ -52,14 +53,35 @@ r.post('/ticket', requireAuth, ticketLimiter, async (req, res) => {
       message: z.string().min(10).max(2000),
     }).parse(req.body)
 
+    // Salva nel DB
+    const ticket = await prisma.supportTicket.create({
+      data: {
+        userId: req.user.id,
+        category: data.category,
+        subject: data.subject,
+        message: data.message,
+        status: 'OPEN',
+      },
+    })
+
+    // Notifica Telegram
     notifySupportTicket({
+      user: req.user,
+      category: data.category,
+      subject: data.subject,
+      message: data.message,
+      ticketId: ticket.id,
+    }).catch(() => {})
+
+    // Email all'admin
+    sendTicketEmail({
       user: req.user,
       category: data.category,
       subject: data.subject,
       message: data.message,
     }).catch(() => {})
 
-    res.json({ message: 'Ticket trasmesso al Comando. Risposta entro 24 ore sul tuo canale Telegram o email.' })
+    res.json({ message: 'Ticket trasmesso al Comando. Risposta entro 24 ore sul tuo canale Telegram o email.', ticketId: ticket.id })
   } catch (e) { res.status(400).json({ error: e.message }) }
 })
 

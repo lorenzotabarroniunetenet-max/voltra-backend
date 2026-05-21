@@ -80,6 +80,18 @@ export async function notifyPlain(text) {
   }
 }
 
+export async function notifyMember(telegramChatId, text) {
+  const token = process.env.TELEGRAM_BOT_TOKEN
+  if (!token || !telegramChatId) return
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: telegramChatId, text, parse_mode: 'HTML', disable_web_page_preview: true }),
+    })
+  } catch (e) { console.error('[telegram] notifyMember failed:', e.message) }
+}
+
 export async function notifyPurchaseReceipt({ user, program, receiptUrl, network, coupon, purchaseCount }) {
   await notifyAdmin(
     `🎖 *Nuova Richiesta Grado*\n\n` +
@@ -112,13 +124,32 @@ const CATEGORY_LABELS = {
   altro: '◈ ALTRO',
 }
 
-export async function notifySupportTicket({ user, category, subject, message }) {
+export async function notifySupportTicket({ user, category, subject, message, ticketId }) {
+  const token = process.env.TELEGRAM_BOT_TOKEN
+  const chatId = await getSetting('TELEGRAM_ADMIN_CHAT_ID', process.env.TELEGRAM_ADMIN_CHAT_ID || '')
+  if (!token || !chatId) return
   const tag = CATEGORY_LABELS[category] || '◈ ALTRO'
-  await notifyAdmin(
-    `🎫 *Nuovo Ticket Supporto* — ${tag}\n\n` +
-    `Membro: ${user.name} (${user.email})\n` +
-    `Oggetto: *${subject}*\n\n` +
-    `Messaggio:\n${message.slice(0, 800)}${message.length > 800 ? '...' : ''}\n\n` +
-    `[Apri Stato Maggiore](https://voltrasolutions.com/admin)`
-  )
+  const text =
+    `🎫 <b>Nuovo Ticket — ${tag}</b>\n\n` +
+    `👤 <b>${user.name}</b> (${user.email})\n` +
+    `Matricola: <code>${user.matricola || 'N/D'}</code>\n` +
+    `Oggetto: <b>${subject}</b>\n\n` +
+    `${message.slice(0, 800)}${message.length > 800 ? '...' : ''}`
+  const keyboard = user.telegramChatId ? {
+    inline_keyboard: [[
+      { text: '💬 Rispondi via bot', callback_data: `v1:sup:reply:${user.telegramChatId}` },
+      { text: '✅ Chiudi ticket', callback_data: ticketId ? `v1:sup:close:${ticketId}` : 'v1:nop' },
+    ]]
+  } : {
+    inline_keyboard: [[
+      { text: '🌐 Apri admin', url: 'https://voltrasolutions.com/admin' },
+    ]]
+  }
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML', reply_markup: keyboard, disable_web_page_preview: true }),
+    })
+  } catch (e) { console.error('[telegram] ticket notify failed:', e.message) }
 }

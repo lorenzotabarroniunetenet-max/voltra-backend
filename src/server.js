@@ -8,6 +8,7 @@ import purchaseRoutes from './routes/purchase.js'
 import contactRoutes from './routes/contact.js'
 import membriRoutes from './routes/membri.js'
 import aiRoutes from './routes/ai.js'
+import telegramRoutes from './routes/telegram.js'
 
 const app = express()
 app.set('trust proxy', 1)
@@ -33,6 +34,7 @@ app.use('/api/purchase', purchaseRoutes)
 app.use('/api/contact', contactRoutes)
 app.use('/api/membri', membriRoutes)
 app.use('/api/ai', aiRoutes)
+app.use('/api/telegram', telegramRoutes)
 
 app.use((err, req, res, next) => {
   console.error('[error]', err)
@@ -40,4 +42,20 @@ app.use((err, req, res, next) => {
 })
 
 const port = process.env.PORT || 4000
-app.listen(port, () => console.log(`Voltra v3.9 backend on :${port}`))
+app.listen(port, () => {
+  console.log(`Voltra backend on :${port}`)
+  // Avvia bot in long polling (non-blocking)
+  import('./bot/index.js').then(({ bot }) => {
+    if (bot) {
+      bot.start({
+        allowed_updates: ['message', 'callback_query'],
+        drop_pending_updates: false,
+        onStart: (info) => console.log(`[bot] @${info.username} polling`),
+      })
+      // Avvia cron notifiche
+      import('./cron/notifications.js').then(({ startNotificationCrons }) => {
+        startNotificationCrons(bot)
+      }).catch(e => console.error('[cron] start error:', e.message))
+    }
+  }).catch(e => console.error('[bot] start error:', e.message))
+})
