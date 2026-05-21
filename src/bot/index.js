@@ -3,7 +3,6 @@ import { conversations, createConversation } from '@grammyjs/conversations'
 import { autoRetry } from '@grammyjs/auto-retry'
 import { prisma } from '../lib/prisma.js'
 import { getSetting, setSetting } from '../lib/settings.js'
-import { prismaConversationStorage } from './prismaConversationStorage.js'
 
 import { isAdmin, isMod, isSuperAdmin } from './auth.js'
 import { adminHomeKeyboard, memberHomeKeyboard, escapeHtml } from './keyboards.js'
@@ -40,8 +39,8 @@ if (bot) {
   // 1) Session
   bot.use(session({ initial: () => ({}) }))
 
-  // 2) Conversations plugin con storage Prisma (resistente ai cold-start)
-  bot.use(conversations({ storage: prismaConversationStorage(prisma) }))
+  // 2) Conversations plugin con storage in-memory
+  bot.use(conversations())
 
   // 3) Registrazione conversations
   bot.use(createConversation(rejectOrderReasonConvo, 'rejectOrderReason'))
