@@ -377,6 +377,25 @@ async function approveOrderLogic(orderId, decidedBy) {
     },
   })
 
+  // Crea la dotazione operativa se non già presente
+  if (program) {
+    const existing = await prisma.propAccount.findFirst({
+      where: { userId: order.userId, programId: program.id, status: 'ACTIVE' },
+    })
+    if (!existing) {
+      await prisma.propAccount.create({
+        data: {
+          userId: order.userId,
+          programId: program.id,
+          brokerLogin: 'DA ASSEGNARE',
+          broker: 'cTrader',
+          startBalance: program.accountSize,
+          status: 'ACTIVE',
+        },
+      }).catch(() => {})
+    }
+  }
+
   // Aggiorna ordine
   await prisma.order.update({
     where: { id: orderId },

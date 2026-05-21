@@ -209,6 +209,26 @@ r.post('/approve/:id', async (req, res) => {
       where: { id: order.userId },
       data: { rank: program?.name || order.programName, purchaseCount: { increment: 1 } },
     })
+
+    // Crea la dotazione operativa (PropAccount) se non già presente per questo programma
+    if (program) {
+      const existing = await prisma.propAccount.findFirst({
+        where: { userId: order.userId, programId: program.id, status: 'ACTIVE' },
+      })
+      if (!existing) {
+        await prisma.propAccount.create({
+          data: {
+            userId: order.userId,
+            programId: program.id,
+            brokerLogin: 'DA ASSEGNARE',
+            broker: 'cTrader',
+            startBalance: program.accountSize,
+            status: 'ACTIVE',
+          },
+        }).catch(() => {})
+      }
+    }
+
     await prisma.order.update({
       where: { id: order.id },
       data: { status: 'APPROVED', decidedAt: new Date(), decidedBy: 'telegram', approvalToken: null },
