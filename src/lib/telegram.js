@@ -43,20 +43,41 @@ export async function notifyPayoutRequest({ user, account, program, amount, netw
 }
 
 export async function notifyOrderApproval({ user, order, approveUrl, profileUrl }) {
-  await notifyAdmin(
-    `🎖 *NUOVA PROMOZIONE*\n\n` +
+  const text =
+    `🎖 NUOVA PROMOZIONE\n\n` +
     `Membro: ${user.name} (${user.email})\n` +
-    `Matricola: \`${user.matricola || 'N/D'}\`\n` +
+    `Matricola: ${user.matricola || 'N/D'}\n` +
     `Grado attuale: ${user.rank || 'Caporale'}\n` +
-    `Richiesta: *${order.programName}*\n` +
+    `Richiesta: ${order.programName}\n` +
     `Importo: ${order.amount} ${order.currency}` + (order.network ? ` (${order.network})` : '') + `\n` +
-    (order.txHash ? `TxHash: \`${order.txHash}\`\n` : '⚠️ Nessuna TxHash\n') +
-    (order.couponCode ? `Coupon: \`${order.couponCode}\`\n` : '') +
-    (order.receiptUrl ? `Ricevuta: [allegato](${order.receiptUrl})\n` : '') +
-    `\nOrdine: \`${order.id}\`\n\n` +
-    `✓ [APPROVA CON 1 CLICK](${approveUrl})\n` +
-    `👤 [Scheda utente](${profileUrl})`
-  )
+    (order.txHash ? `TxHash: ${order.txHash}\n` : 'Nessuna TxHash\n') +
+    (order.couponCode ? `Coupon: ${order.couponCode}\n` : '') +
+    (order.receiptUrl ? `Ricevuta: ${order.receiptUrl}\n` : '') +
+    `\nAPPROVA CON 1 CLICK:\n${approveUrl}\n\n` +
+    `Scheda utente:\n${profileUrl}`
+  await notifyPlain(text)
+}
+
+export async function notifyPlain(text) {
+  const token = process.env.TELEGRAM_BOT_TOKEN
+  const chatId = await getSetting('TELEGRAM_ADMIN_CHAT_ID', process.env.TELEGRAM_ADMIN_CHAT_ID || '')
+  if (!token || !chatId) {
+    console.warn('[telegram] missing token or chat ID')
+    return
+  }
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text, disable_web_page_preview: true }),
+    })
+    if (!r.ok) {
+      const body = await r.text().catch(() => '')
+      console.error('[telegram] plain send failed:', r.status, body)
+    }
+  } catch (e) {
+    console.error('[telegram] plain send error:', e.message)
+  }
 }
 
 export async function notifyPurchaseReceipt({ user, program, receiptUrl, network, coupon, purchaseCount }) {
