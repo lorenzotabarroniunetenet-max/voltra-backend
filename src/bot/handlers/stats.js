@@ -1,8 +1,8 @@
 import { prisma } from '../../lib/prisma.js'
 import { broadcastConfirmKeyboard, backHomeKeyboard, escapeHtml } from '../keyboards.js'
 import { InlineKeyboard } from 'grammy'
+import { generateOdG } from '../../services/claude.js'
 
-// Stato in memoria per la sessione broadcast (semplicistica ma sufficiente per ~30 utenti)
 const broadcastDraft = new Map()
 
 export async function handleStats(ctx) {
@@ -47,25 +47,91 @@ export async function handleStats(ctx) {
 
 export async function handleBroadcastStart(ctx) {
   await ctx.answerCallbackQuery()
-  broadcastDraft.set(ctx.from.id, { waiting: true })
+  broadcastDraft.set(ctx.from.id, { waiting: true, mode: null })
   await ctx.editMessageText(
-    `📢 <b>Ordine del Giorno</b>\n\nScrivi il messaggio da inviare a tutti i membri collegati.\n\n<i>Invia il testo nella chat ora.</i>`,
+    `📢 <b>Ordine del Giorno</b>\n\nCome vuoi procedere?`,
+    {
+      parse_mode: 'HTML',
+      reply_markup: new InlineKeyboard()
+        .text('🤖 Genera con AI', 'v1:bc:ai').row()
+        .text('✏️ Scrivi manualmente', 'v1:bc:manual').row()
+        .text('❌ Annulla', 'v1:home')
+    }
+  )
+}
+
+export async function handleBroadcastAI(ctx) {
+  await ctx.answerCallbackQuery()
+  broadcastDraft.set(ctx.from.id, { waiting: true, mode: 'ai' })
+  await ctx.editMessageText(
+    `🤖 <b>OdG con AI</b>\n\nScrivi 2-3 parole chiave e Claude genera il comunicato ufficiale.\n\n<i>Esempi: "ottimi risultati", "nuovi gradi in arrivo", "settimana difficile ma avanti"</i>`,
+    { parse_mode: 'HTML', reply_markup: new InlineKeyboard().text('❌ Annulla', 'v1:home') }
+  )
+}
+
+export async function handleBroadcastManual(ctx) {
+  await ctx.answerCallbackQuery()
+  broadcastDraft.set(ctx.from.id, { waiting: true, mode: 'manual' })
+  await ctx.editMessageText(
+    `✏️ <b>OdG manuale</b>\n\nScrivi il messaggio completo da inviare a tutti i membri.\n\n<i>Invia il testo nella chat ora.</i>`,
     { parse_mode: 'HTML', reply_markup: new InlineKeyboard().text('❌ Annulla', 'v1:home') }
   )
 }
 
 export async function handleBroadcastText(ctx) {
   const draft = broadcastDraft.get(ctx.from.id)
-  if (!draft?.waiting) return
-  const text = ctx.message?.text
-  if (!text) return
-  const count = await prisma.user.count({
-    where: { telegramChatId: { not: null }, role: 'TRADER' },
-  })
-  broadcastDraft.set(ctx.from.id, { text, waiting: false })
+  if (!draft?.waiting) return false
+  const input = ctx.message?.text
+  if (!input) return false
+
+  const count = await prisma.user.count({ where: { telegramChatId: { not: null }, role: 'TRADER' } })
+
+  if (draft.mode === 'ai') {
+    broadcastDraft.set(ctx.from.id, { waiting: false, mode: 'ai', generating: true })
+    await ctx.reply('🤖 Generazione in corso...', { parse_mode: 'HTML' })
+    const generated = await generateOdG(input)
+    if (!generated) {
+      await ctx.reply('⚠️ Generazione fallita. Riprova o usa la modalità manuale.', { reply_markup: backHomeKeyboard() })
+      broadcastDraft.delete(ctx.from.id)
+      return true
+    }
+    broadcastDraft.set(ctx.from.id, { text: generated, waiting: false, mode: 'ai' })
+    await ctx.reply(
+      `📋 <b>OdG generato dall'AI</b>\n\n${escapeHtml(generated)}\n\n<i>Verrà inviato a ${count} membri.</i>`,
+      { parse_mode: 'HTML', reply_markup: new InlineKeyboard()
+          .text('📢 Invia a tutti', 'v1:bc:conf').row()
+          .text('🔄 Rigenera', `v1:bc:regen`).row()
+          .text('❌ Annulla', 'v1:home')
+      }
+    )
+    broadcastDraft.set(ctx.from.id, { text: generated, waiting: false, mode: 'ai', keywords: input })
+    return true
+  }
+
+  // Modalità manuale
+  broadcastDraft.set(ctx.from.id, { text: input, waiting: false, mode: 'manual' })
   await ctx.reply(
-    `📢 <b>Anteprima messaggio</b>\n\n${escapeHtml(text)}\n\n<i>Verrà inviato a ${count} membri.</i>`,
+    `📢 <b>Anteprima</b>\n\n${escapeHtml(input)}\n\n<i>Verrà inviato a ${count} membri.</i>`,
     { parse_mode: 'HTML', reply_markup: broadcastConfirmKeyboard(count) }
+  )
+  return true
+}
+
+export async function handleBroadcastRegen(ctx) {
+  await ctx.answerCallbackQuery({ text: 'Rigenerazione...' })
+  const draft = broadcastDraft.get(ctx.from.id)
+  if (!draft?.keywords) { await ctx.editMessageText('Sessione scaduta. Riprova.', { reply_markup: backHomeKeyboard() }); return }
+  const generated = await generateOdG(draft.keywords)
+  if (!generated) { await ctx.answerCallbackQuery({ text: 'Generazione fallita.', show_alert: true }); return }
+  const count = await prisma.user.count({ where: { telegramChatId: { not: null }, role: 'TRADER' } })
+  broadcastDraft.set(ctx.from.id, { ...draft, text: generated })
+  await ctx.editMessageText(
+    `📋 <b>OdG rigenerato</b>\n\n${escapeHtml(generated)}\n\n<i>Verrà inviato a ${count} membri.</i>`,
+    { parse_mode: 'HTML', reply_markup: new InlineKeyboard()
+        .text('📢 Invia a tutti', 'v1:bc:conf').row()
+        .text('🔄 Rigenera', 'v1:bc:regen').row()
+        .text('❌ Annulla', 'v1:home')
+    }
   )
 }
 
@@ -80,6 +146,17 @@ export async function handleBroadcastConfirm(ctx) {
     select: { telegramChatId: true, name: true },
   })
   broadcastDraft.delete(ctx.from.id)
+
+  // Salva nella Sala Briefing
+  await prisma.briefing.create({
+    data: {
+      title: 'Ordine del Giorno',
+      content: draft.text,
+      pinned: false,
+      aiGenerated: draft.mode === 'ai',
+    }
+  }).catch(() => {}) // graceful se campo aiGenerated non esiste ancora
+
   await ctx.editMessageText(
     `📢 <b>Broadcast in corso...</b>\n\n0 / ${members.length} inviati`,
     { parse_mode: 'HTML' }
@@ -102,7 +179,7 @@ export async function handleBroadcastConfirm(ctx) {
         }).catch(() => {})
       }
     }
-    await new Promise(r => setTimeout(r, 50)) // ~20 msg/s sotto il limite di 30
+    await new Promise(r => setTimeout(r, 50))
   }
   await ctx.reply(
     `✅ <b>Broadcast completato</b>\n\n✅ Inviati: <b>${sent}</b>\n❌ Falliti: <b>${failed}</b>`,

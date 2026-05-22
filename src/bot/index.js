@@ -12,7 +12,7 @@ import { handleOrdersList, handleOrderView, handleOrderAction, handleOrderConfir
 import { handleMissionsList, handleMissionView, handleMissionAction, handleMissionConfirm } from './handlers/missions.js'
 import { handlePayoutsList, handlePayoutView, handlePayoutAction, handlePayoutConfirm } from './handlers/payouts.js'
 import { handleMemberRank, handleMemberMission, handleMemberPayout, handleMemberFAQ, handleMemberLinkRequest } from './handlers/member.js'
-import { handleStats, handleBroadcastStart, handleBroadcastText, handleBroadcastConfirm } from './handlers/stats.js'
+import { handleStats, handleBroadcastStart, handleBroadcastText, handleBroadcastConfirm, handleBroadcastAI, handleBroadcastManual, handleBroadcastRegen } from './handlers/stats.js'
 import { buildSupportHandlers, supportReplyConvo } from './handlers/support.js'
 import { buildSettingsHandlers, addModeratorConvo, sendDirectMessageConvo, setWelcomeMessageConvo } from './handlers/settings.js'
 import { buildAIFilter } from './handlers/aiFilter.js'
@@ -108,6 +108,10 @@ if (bot) {
     if (data === 'v1:sec:missions') { if (!(await isAdmin(ctx))) { await ctx.answerCallbackQuery({ text: '⛔', show_alert: true }); return } await handleMissionsList(ctx); return }
     if (data === 'v1:sec:stats') { if (!(await isAdmin(ctx))) { await ctx.answerCallbackQuery({ text: '⛔', show_alert: true }); return } await handleStats(ctx); return }
     if (data === 'v1:sec:broadcast') { if (!(await isSuperAdmin(ctx))) { await ctx.answerCallbackQuery({ text: '⛔', show_alert: true }); return } await handleBroadcastStart(ctx); return }
+    if (data === 'v1:bc:ai') { if (!(await isSuperAdmin(ctx))) { await ctx.answerCallbackQuery({ text: '⛔', show_alert: true }); return } await handleBroadcastAI(ctx); return }
+    if (data === 'v1:bc:manual') { if (!(await isSuperAdmin(ctx))) { await ctx.answerCallbackQuery({ text: '⛔', show_alert: true }); return } await handleBroadcastManual(ctx); return }
+    if (data === 'v1:bc:regen') { if (!(await isSuperAdmin(ctx))) { await ctx.answerCallbackQuery({ text: '⛔', show_alert: true }); return } await handleBroadcastRegen(ctx); return }
+    if (data === 'v1:bc:conf') { if (!(await isSuperAdmin(ctx))) { await ctx.answerCallbackQuery({ text: '⛔', show_alert: true }); return } await handleBroadcastConfirm(ctx); return }
     if (data === 'v1:sec:members') { if (!(await isAdmin(ctx))) { await ctx.answerCallbackQuery({ text: '⛔', show_alert: true }); return } await handleMembersList(ctx); return }
 
     // Ordini
@@ -147,9 +151,6 @@ if (bot) {
     if ((m = data.match(/^v1:p:view:(.+)$/))) { if (!(await isAdmin(ctx))) { await ctx.answerCallbackQuery({ text: '⛔', show_alert: true }); return } await handlePayoutView(ctx, m[1]); return }
     if ((m = data.match(/^v1:p:(apr|rej):(.+)$/))) { if (!(await isAdmin(ctx))) { await ctx.answerCallbackQuery({ text: '⛔', show_alert: true }); return } await handlePayoutAction(ctx, m[1], m[2]); return }
     if ((m = data.match(/^v1:p:conf:(apr|rej):(.+)$/))) { if (!(await isAdmin(ctx))) { await ctx.answerCallbackQuery({ text: '⛔', show_alert: true }); return } await handlePayoutConfirm(ctx, m[1], m[2]); return }
-
-    // Broadcast
-    if (data === 'v1:bc:conf') { if (!(await isSuperAdmin(ctx))) { await ctx.answerCallbackQuery({ text: '⛔', show_alert: true }); return } await handleBroadcastConfirm(ctx); return }
 
     // Membri
     if ((m = data.match(/^v1:mem:view:(.+)$/))) { if (!(await isAdmin(ctx))) { await ctx.answerCallbackQuery({ text: '⛔', show_alert: true }); return } await handleMemberView(ctx, m[1]); return }

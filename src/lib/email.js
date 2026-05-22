@@ -120,6 +120,15 @@ export async function sendLoginCodeEmail(email, name, code) {
   } catch (e) { console.error('[email] login code failed:', e.message) }
 }
 
+import { personalizeEmail } from '../services/claude.js'
+
+async function getPersonalizedIntro(memberContext) {
+  try {
+    const text = await personalizeEmail(null, memberContext)
+    return text || null
+  } catch { return null }
+}
+
 // ── Template premium con accent color variabile ──
 const premiumTemplate = (title, content, ctaUrl, ctaText, support, accentColor = '#B4FF39') => `<!DOCTYPE html>
 <html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -151,9 +160,10 @@ const premiumTemplate = (title, content, ctaUrl, ctaText, support, accentColor =
 export async function sendPromoApprovedEmail(email, { name, programName, accountSize, brokerLogin }) {
   if (!resend) return
   const { from, support } = await getEmailConfig()
+  const aiIntro = await getPersonalizedIntro({ evento: 'promozione_approvata', nome: name, grado: programName, dotazione: accountSize })
+  const introText = aiIntro || `Soldato <strong style="color:#fff">${name}</strong>, la Sua richiesta di promozione è stata approvata dal Comando.`
   const content = `
-    <p>Soldato <strong style="color:#fff">${name}</strong>,</p>
-    <p>la Sua richiesta di promozione è stata approvata dal Comando.</p>
+    <p>${introText}</p>
     <table cellpadding="0" cellspacing="0" style="width:100%;margin:24px 0;border-radius:10px;overflow:hidden;border:1px solid rgba(180,255,57,.2)">
       <tr style="background:rgba(180,255,57,.06)">
         <td style="padding:12px 16px;font-size:12px;color:#888;text-transform:uppercase;letter-spacing:.08em;width:40%">Programma</td>
@@ -226,9 +236,10 @@ export async function sendPayoutApprovedEmail(email, { name, amount, wallet }) {
 export async function sendMissionPassedEmail(email, { name, programName, accountSize }) {
   if (!resend) return
   const { from, support } = await getEmailConfig()
+  const aiIntro = await getPersonalizedIntro({ evento: 'missione_compiuta', nome: name, grado: programName, dotazione: accountSize })
+  const introText = aiIntro || `Soldato <strong style="color:#fff">${name}</strong>, la missione <strong style="color:#fff">${programName}</strong> è stata completata con successo.`
   const content = `
-    <p>Soldato <strong style="color:#fff">${name}</strong>,</p>
-    <p>la missione <strong style="color:#fff">${programName}</strong> è stata completata con successo.</p>
+    <p>${introText}</p>
     <div style="margin:24px 0;padding:20px;background:rgba(180,255,57,.05);border:1px solid rgba(180,255,57,.2);border-radius:10px;text-align:center">
       <div style="font-size:32px;margin-bottom:8px">🏅</div>
       <div style="font-size:13px;color:#888;text-transform:uppercase;letter-spacing:.1em">Obiettivo raggiunto</div>

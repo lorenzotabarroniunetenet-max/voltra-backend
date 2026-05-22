@@ -12,6 +12,52 @@ Regole:
 - Se incerto scegli OPERATIVE.
 - SOLO JSON puro, niente testo prima/dopo, niente backtick.`
 
+export async function generateOdG(keywords) {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) return null
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 20000)
+  try {
+    const res = await fetch(CLAUDE_ENDPOINT, {
+      method: 'POST',
+      headers: { 'x-api-key': apiKey, 'anthropic-version': ANTHROPIC_VERSION, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        model: process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001',
+        max_tokens: 600,
+        system: `Sei il Comando del club privato militare italiano "Voltra". Scrivi un Ordine del Giorno ufficiale breve (max 180 parole) in italiano, tono militare austero e rispettoso, in prima persona plurale del Comando. Struttura: titolo "📋 ORDINE DEL GIORNO — VOLTRA COMANDO", corpo con 2-3 paragrafi, chiusura "Silentio agimus. — Il Comando Voltra". Niente prezzi, niente riferimenti tecnici al trading. Solo comunicazione operativa del club.`,
+        messages: [{ role: 'user', content: `Genera un OdG basato su: ${keywords}` }],
+      }),
+      signal: ctrl.signal,
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    return (data?.content?.[0]?.text || '').trim() || null
+  } catch { return null } finally { clearTimeout(timer) }
+}
+
+export async function personalizeEmail(template, memberContext) {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) return null
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 15000)
+  try {
+    const res = await fetch(CLAUDE_ENDPOINT, {
+      method: 'POST',
+      headers: { 'x-api-key': apiKey, 'anthropic-version': ANTHROPIC_VERSION, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        model: process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001',
+        max_tokens: 400,
+        system: `Sei il Comando del club privato "Voltra". Scrivi UN SOLO paragrafo di apertura personalizzato (2-3 frasi, max 60 parole) per un'email al membro. Tono militare rispettoso, usa il nome del membro, fai riferimento alla sua storia nel club se disponibile. Niente prezzi. Solo il paragrafo, niente altro.`,
+        messages: [{ role: 'user', content: JSON.stringify(memberContext) }],
+      }),
+      signal: ctrl.signal,
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    return (data?.content?.[0]?.text || '').trim() || null
+  } catch { return null } finally { clearTimeout(timer) }
+}
+
 export async function callClaude(userMessage) {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
