@@ -16,8 +16,8 @@ export async function handleStats(ctx) {
     avgRating, missionsThisMonth, pendingOrders, activeMissions, pendingPayouts,
   ] = await Promise.all([
     prisma.order.aggregate({ _sum: { amount: true }, where: { status: 'APPROVED', updatedAt: { gte: thirtyDaysAgo } } }),
-    prisma.user.count({ where: { role: 'USER', approved: true } }),
-    prisma.user.count({ where: { telegramChatId: { not: null }, role: 'USER' } }),
+    prisma.user.count({ where: { role: 'TRADER', approved: true } }),
+    prisma.user.count({ where: { telegramChatId: { not: null }, role: 'TRADER' } }),
     prisma.supportConversation.count({ where: { status: { in: ['OPEN', 'IN_PROGRESS'] } } }).catch(() => 0),
     prisma.supportRating.aggregate({ _avg: { score: true }, _count: true }).catch(() => ({ _avg: { score: null }, _count: 0 })),
     prisma.propAccount.count({ where: { status: 'PASSED', updatedAt: { gte: firstOfMonth } } }).catch(() => 0),
@@ -60,7 +60,7 @@ export async function handleBroadcastText(ctx) {
   const text = ctx.message?.text
   if (!text) return
   const count = await prisma.user.count({
-    where: { telegramChatId: { not: null }, role: 'USER' },
+    where: { telegramChatId: { not: null }, role: 'TRADER' },
   })
   broadcastDraft.set(ctx.from.id, { text, waiting: false })
   await ctx.reply(
@@ -76,7 +76,7 @@ export async function handleBroadcastConfirm(ctx) {
     return ctx.editMessageText('Nessun messaggio in bozza. Riprova.', { reply_markup: backHomeKeyboard() })
   }
   const members = await prisma.user.findMany({
-    where: { telegramChatId: { not: null }, role: 'USER' },
+    where: { telegramChatId: { not: null }, role: 'TRADER' },
     select: { telegramChatId: true, name: true },
   })
   broadcastDraft.delete(ctx.from.id)

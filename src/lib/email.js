@@ -120,6 +120,152 @@ export async function sendLoginCodeEmail(email, name, code) {
   } catch (e) { console.error('[email] login code failed:', e.message) }
 }
 
+// ── Template premium con accent color variabile ──
+const premiumTemplate = (title, content, ctaUrl, ctaText, support, accentColor = '#B4FF39') => `<!DOCTYPE html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#f0f0f0">
+  <div style="max-width:560px;margin:0 auto;padding:32px 16px">
+    <!-- Header -->
+    <div style="background:#050505;border:1px solid rgba(255,255,255,.07);border-radius:16px 16px 0 0;padding:24px 32px;border-bottom:2px solid ${accentColor}">
+      <table cellpadding="0" cellspacing="0" style="width:100%"><tr>
+        <td><span style="font-size:22px;color:${accentColor};vertical-align:middle">⚡</span><span style="font-size:18px;font-weight:800;letter-spacing:.08em;vertical-align:middle;margin-left:8px;color:#fff">VOLTRA</span></td>
+        <td style="text-align:right;font-size:10px;color:#444;letter-spacing:.1em;text-transform:uppercase">Comunicazione riservata</td>
+      </tr></table>
+    </div>
+    <!-- Body -->
+    <div style="background:#080808;border:1px solid rgba(255,255,255,.07);border-top:none;padding:36px 32px">
+      <h1 style="font-size:24px;font-weight:800;margin:0 0 6px;letter-spacing:-.02em;color:#fff">${title}</h1>
+      <div style="width:40px;height:2px;background:${accentColor};margin-bottom:24px"></div>
+      <div style="font-size:14px;line-height:1.8;color:#bbb">${content}</div>
+      ${ctaUrl ? `<div style="margin:32px 0 8px"><a href="${ctaUrl}" style="display:inline-block;background:${accentColor};color:#000;font-weight:800;padding:14px 28px;border-radius:8px;text-decoration:none;font-size:14px;letter-spacing:.02em">${ctaText}</a></div>` : ''}
+    </div>
+    <!-- Footer -->
+    <div style="background:#030303;border:1px solid rgba(255,255,255,.07);border-top:none;border-radius:0 0 16px 16px;padding:18px 32px">
+      <p style="margin:0 0 4px;font-size:10px;letter-spacing:.08em;color:#333;text-transform:uppercase">Silentio agimus.</p>
+      <p style="margin:0;font-size:11px;color:#444">© 2026 Voltra Solutions · <a href="mailto:${support}" style="color:#555;text-decoration:none">${support}</a></p>
+    </div>
+  </div>
+</body></html>`
+
+// ── Promozione approvata ──
+export async function sendPromoApprovedEmail(email, { name, programName, accountSize, brokerLogin }) {
+  if (!resend) return
+  const { from, support } = await getEmailConfig()
+  const content = `
+    <p>Soldato <strong style="color:#fff">${name}</strong>,</p>
+    <p>la Sua richiesta di promozione è stata approvata dal Comando.</p>
+    <table cellpadding="0" cellspacing="0" style="width:100%;margin:24px 0;border-radius:10px;overflow:hidden;border:1px solid rgba(180,255,57,.2)">
+      <tr style="background:rgba(180,255,57,.06)">
+        <td style="padding:12px 16px;font-size:12px;color:#888;text-transform:uppercase;letter-spacing:.08em;width:40%">Programma</td>
+        <td style="padding:12px 16px;font-weight:700;color:#fff">${programName}</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 16px;font-size:12px;color:#888;text-transform:uppercase;letter-spacing:.08em;border-top:1px solid rgba(255,255,255,.05)">Dotazione</td>
+        <td style="padding:12px 16px;font-weight:700;color:#B4FF39;border-top:1px solid rgba(255,255,255,.05)">$${Number(accountSize).toLocaleString()}</td>
+      </tr>
+      ${brokerLogin && brokerLogin !== 'DA ASSEGNARE' ? `
+      <tr>
+        <td style="padding:12px 16px;font-size:12px;color:#888;text-transform:uppercase;letter-spacing:.08em;border-top:1px solid rgba(255,255,255,.05)">Login broker</td>
+        <td style="padding:12px 16px;font-family:monospace;font-weight:700;color:#fff;border-top:1px solid rgba(255,255,255,.05)">${brokerLogin}</td>
+      </tr>` : ''}
+    </table>
+    <p>La missione è ora attiva. Acceda al Quartier Generale per monitorare l'avanzamento.</p>
+    <p style="margin-top:24px"><strong style="color:#fff">Il Comando</strong><br><span style="color:#555">Voltra</span></p>`
+  const html = premiumTemplate('Promozione approvata', content, 'https://voltrasolutions.com/dashboard', 'Accedi al Quartier Generale', support, '#B4FF39')
+  try {
+    await resend.emails.send({ from, to: email, subject: `✅ Promozione approvata — ${programName}`, html, replyTo: support })
+  } catch (e) { console.error('[email] promoApproved failed:', e.message) }
+}
+
+// ── Promozione rifiutata ──
+export async function sendPromoRejectedEmail(email, { name, programName, reason }) {
+  if (!resend) return
+  const { from, support } = await getEmailConfig()
+  const content = `
+    <p>Soldato <strong style="color:#fff">${name}</strong>,</p>
+    <p>la Sua richiesta di promozione al programma <strong style="color:#fff">${programName}</strong> non è stata approvata dal Comando.</p>
+    <div style="margin:24px 0;padding:20px;background:rgba(255,71,87,.06);border:1px solid rgba(255,71,87,.2);border-radius:10px;border-left:3px solid #ff4757">
+      <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Motivo del Comando</div>
+      <div style="font-size:14px;color:#ccc;line-height:1.6">${reason || 'Non specificato'}</div>
+    </div>
+    <p>Può presentare una nuova richiesta non appena soddisfatti i requisiti indicati. Per chiarimenti contatti il supporto.</p>
+    <p style="margin-top:24px"><strong style="color:#fff">Il Comando</strong><br><span style="color:#555">Voltra</span></p>`
+  const html = premiumTemplate('Promozione non approvata', content, 'https://voltrasolutions.com/dashboard', 'Torna al Quartier Generale', support, '#ff4757')
+  try {
+    await resend.emails.send({ from, to: email, subject: `Esito promozione — ${programName}`, html, replyTo: support })
+  } catch (e) { console.error('[email] promoRejected failed:', e.message) }
+}
+
+// ── Rimborso approvato ──
+export async function sendPayoutApprovedEmail(email, { name, amount, wallet }) {
+  if (!resend) return
+  const { from, support } = await getEmailConfig()
+  const content = `
+    <p>Soldato <strong style="color:#fff">${name}</strong>,</p>
+    <p>il Suo rimborso missione è stato elaborato e approvato dal Comando.</p>
+    <table cellpadding="0" cellspacing="0" style="width:100%;margin:24px 0;border-radius:10px;overflow:hidden;border:1px solid rgba(232,200,74,.2)">
+      <tr style="background:rgba(232,200,74,.06)">
+        <td style="padding:12px 16px;font-size:12px;color:#888;text-transform:uppercase;letter-spacing:.08em;width:40%">Importo</td>
+        <td style="padding:12px 16px;font-weight:800;color:#E8C84A;font-size:18px">$${Number(amount).toLocaleString()}</td>
+      </tr>
+      ${wallet ? `
+      <tr>
+        <td style="padding:12px 16px;font-size:12px;color:#888;text-transform:uppercase;letter-spacing:.08em;border-top:1px solid rgba(255,255,255,.05)">Wallet</td>
+        <td style="padding:12px 16px;font-family:monospace;font-size:12px;color:#ccc;word-break:break-all;border-top:1px solid rgba(255,255,255,.05)">${wallet}</td>
+      </tr>` : ''}
+    </table>
+    <p>I fondi sono stati inviati al wallet indicato. I tempi di accredito dipendono dalla rete blockchain.</p>
+    <p style="margin-top:24px"><strong style="color:#fff">Il Comando</strong><br><span style="color:#555">Voltra</span></p>`
+  const html = premiumTemplate('Rimborso approvato', content, 'https://voltrasolutions.com/dashboard', 'Accedi al Quartier Generale', support, '#E8C84A')
+  try {
+    await resend.emails.send({ from, to: email, subject: `💰 Rimborso approvato — $${Number(amount).toLocaleString()}`, html, replyTo: support })
+  } catch (e) { console.error('[email] payoutApproved failed:', e.message) }
+}
+
+// ── Missione compiuta ──
+export async function sendMissionPassedEmail(email, { name, programName, accountSize }) {
+  if (!resend) return
+  const { from, support } = await getEmailConfig()
+  const content = `
+    <p>Soldato <strong style="color:#fff">${name}</strong>,</p>
+    <p>la missione <strong style="color:#fff">${programName}</strong> è stata completata con successo.</p>
+    <div style="margin:24px 0;padding:20px;background:rgba(180,255,57,.05);border:1px solid rgba(180,255,57,.2);border-radius:10px;text-align:center">
+      <div style="font-size:32px;margin-bottom:8px">🏅</div>
+      <div style="font-size:13px;color:#888;text-transform:uppercase;letter-spacing:.1em">Obiettivo raggiunto</div>
+      <div style="font-size:24px;font-weight:800;color:#B4FF39;margin-top:4px">$${Number(accountSize).toLocaleString()}</div>
+    </div>
+    <p>Il Comando ha registrato la chiusura della missione. Il rimborso sarà elaborato e comunicato a breve.</p>
+    <p>Può presentare una nuova richiesta di promozione non appena il rimborso è stato accreditato.</p>
+    <p style="margin-top:24px"><strong style="color:#fff">Il Comando</strong><br><span style="color:#555">Voltra</span></p>`
+  const html = premiumTemplate('Missione compiuta', content, 'https://voltrasolutions.com/dashboard', 'Accedi al Quartier Generale', support, '#B4FF39')
+  try {
+    await resend.emails.send({ from, to: email, subject: `🏅 Missione compiuta — ${programName}`, html, replyTo: support })
+  } catch (e) { console.error('[email] missionPassed failed:', e.message) }
+}
+
+// ── Missione fallita ──
+export async function sendMissionFailedEmail(email, { name, programName }) {
+  if (!resend) return
+  const { from, support } = await getEmailConfig()
+  const content = `
+    <p>Soldato <strong style="color:#fff">${name}</strong>,</p>
+    <p>la missione <strong style="color:#fff">${programName}</strong> si è conclusa senza il raggiungimento dell'obiettivo.</p>
+    <p>Il Comando ha registrato la chiusura della missione. Non è previsto rimborso per questa operazione.</p>
+    <div style="margin:24px 0;padding:16px 20px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px">
+      <div style="font-size:13px;color:#888;margin-bottom:8px">Prossimi passi</div>
+      <ul style="margin:0;padding:0 0 0 18px;font-size:14px;color:#ccc;line-height:2">
+        <li>Analizzare le cause dell'insuccesso</li>
+        <li>Richiedere supporto alla Linea Diretta HQ se necessario</li>
+        <li>Presentare una nuova richiesta di promozione quando pronto</li>
+      </ul>
+    </div>
+    <p style="margin-top:24px"><strong style="color:#fff">Il Comando</strong><br><span style="color:#555">Voltra</span></p>`
+  const html = premiumTemplate('Missione conclusa', content, 'https://voltrasolutions.com/dashboard', 'Torna al Quartier Generale', support, '#ff4757')
+  try {
+    await resend.emails.send({ from, to: email, subject: `Missione conclusa — ${programName}`, html, replyTo: support })
+  } catch (e) { console.error('[email] missionFailed failed:', e.message) }
+}
+
 export async function sendContactEmail({ name, email, subject, message }) {
   if (!resend) return
   const { from, support } = await getEmailConfig()

@@ -4,7 +4,7 @@ import { prisma } from '../lib/prisma.js'
 import { notifyMember } from '../lib/telegram.js'
 import { requireAuth, requireAdmin } from '../lib/middleware.js'
 import { getAllSettings, setSetting } from '../lib/settings.js'
-import { sendApprovalEmail } from '../lib/email.js'
+import { sendApprovalEmail, sendPromoApprovedEmail, sendPromoRejectedEmail, sendPayoutApprovedEmail, sendMissionPassedEmail, sendMissionFailedEmail } from '../lib/email.js'
 
 const r = Router()
 r.use(requireAuth, requireAdmin)
@@ -108,10 +108,28 @@ r.patch('/accounts/:id', async (req, res) => {
       notes: z.string().optional().nullable(),
     }).parse(req.body)
     const before = await prisma.propAccount.findUnique({ where: { id: req.params.id } })
-    const account = await prisma.propAccount.update({ where: { id: req.params.id }, data })
+    const account = await prisma.propAccount.update({
+      where: { id: req.params.id }, data,
+      include: { user: true, program: true },
+    })
     await prisma.auditLog.create({
       data: { actorId: req.user.id, entity: 'PropAccount', entityId: account.id, action: 'UPDATE', before, after: account },
     })
+    // Email cambio stato missione
+    if (data.status && data.status !== before?.status && account.user?.email) {
+      if (data.status === 'PASSED') {
+        sendMissionPassedEmail(account.user.email, {
+          name: account.user.name,
+          programName: account.program?.name || '',
+          accountSize: account.startBalance,
+        }).catch(() => {})
+      } else if (data.status === 'FAILED') {
+        sendMissionFailedEmail(account.user.email, {
+          name: account.user.name,
+          programName: account.program?.name || '',
+        }).catch(() => {})
+      }
+    }
     res.json(account)
   } catch (e) { res.status(400).json({ error: e.message }) }
 })
@@ -416,11 +434,20 @@ async function approveOrderLogic(orderId, decidedBy) {
   }).catch(() => {})
 
   // Notifica membro su Telegram
-  const member = await prisma.user.findUnique({ where: { id: order.userId }, select: { telegramChatId: true, name: true } })
+  const member = await prisma.user.findUnique({ where: { id: order.userId }, select: { telegramChatId: true, name: true, email: true } })
   if (member?.telegramChatId) {
     notifyMember(member.telegramChatId,
       `🎖 <b>Promozione approvata</b>\n\nComplimenti, <b>${member.name}</b>.\nSei stato promosso a <b>${order.programName}</b>.\n\nLa tua missione è ora attiva su voltrasolutions.com.`
     ).catch(() => {})
+  }
+  // Email promozione approvata
+  if (member?.email) {
+    sendPromoApprovedEmail(member.email, {
+      name: member.name,
+      programName: order.programName,
+      accountSize: program.accountSize,
+      brokerLogin: newAccount?.brokerLogin,
+    }).catch(() => {})
   }
 
   return order
@@ -435,22 +462,30 @@ r.post('/orders/:id/approve', async (req, res) => {
 
 r.post('/orders/:id/reject', async (req, res) => {
   try {
-    const order = await prisma.order.findUnique({ where: { id: req.params.id } })
+    const { reason } = req.body
+    const order = await prisma.order.findUnique({ where: { id: req.params.id }, include: { user: true } })
     if (!order) return res.status(404).json({ error: 'Ordine non trovato' })
     if (order.status !== 'PENDING') return res.status(400).json({ error: 'Ordine già processato' })
     await prisma.order.update({
       where: { id: req.params.id },
-      data: { status: 'REJECTED', decidedAt: new Date(), decidedBy: req.user?.email || 'admin' },
+      data: { status: 'REJECTED', rejectionReason: reason || null, decidedAt: new Date(), decidedBy: req.user?.email || 'admin' },
     })
     await prisma.serviceLogEntry.create({
       data: {
-        userId: order.userId,
-        type: 'note',
+        userId: order.userId, type: 'note',
         title: `Richiesta ${order.programName} rifiutata`,
-        body: 'Versamento non verificato dal Comando.',
+        body: reason ? `Motivo: ${reason}` : 'Versamento non verificato dal Comando.',
         iconKey: 'shield',
       },
     }).catch(() => {})
+    // Email rifiuto
+    if (order.user?.email) {
+      sendPromoRejectedEmail(order.user.email, {
+        name: order.user.name,
+        programName: order.programName,
+        reason,
+      }).catch(() => {})
+    }
     res.json({ message: 'Ordine rifiutato.' })
   } catch (e) { res.status(400).json({ error: e.message }) }
 })
@@ -485,7 +520,16 @@ r.patch('/payouts/:id', async (req, res) => {
     const payout = await prisma.payoutRequest.update({
       where: { id: req.params.id },
       data: { ...data, processedAt: new Date() },
+      include: { account: { include: { user: true } } },
     })
+    // Email rimborso approvato
+    if ((data.status === 'APPROVED' || data.status === 'PAID') && payout.account?.user?.email) {
+      sendPayoutApprovedEmail(payout.account.user.email, {
+        name: payout.account.user.name,
+        amount: payout.amount,
+        wallet: payout.walletAddress,
+      }).catch(() => {})
+    }
     res.json(payout)
   } catch (e) { res.status(400).json({ error: e.message }) }
 })

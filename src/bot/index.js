@@ -239,11 +239,11 @@ async function handleMembersList(ctx) {
   await ctx.answerCallbackQuery()
   try {
     const members = await prisma.user.findMany({
-      where: { role: 'USER', approved: true },
+      where: { role: 'TRADER', approved: true },
       orderBy: { createdAt: 'desc' }, take: 10,
       select: { id: true, name: true, rank: true, matricola: true },
     })
-    const total = await prisma.user.count({ where: { role: 'USER', approved: true } })
+    const total = await prisma.user.count({ where: { role: 'TRADER', approved: true } })
     const kb = new InlineKeyboard()
     for (const m of members) {
       kb.text(`${m.name} · ${m.rank || 'Recluta'}`.substring(0, 40), `v1:mem:view:${m.id}`).row()
