@@ -35,6 +35,7 @@ app.use('/api/contact', contactRoutes)
 app.use('/api/membri', membriRoutes)
 app.use('/api/ai', aiRoutes)
 app.use('/api/telegram', telegramRoutes)
+app.use('/api/subscriptions', (await import('./routes/subscriptions.js')).default)
 
 app.use((err, req, res, next) => {
   console.error('[error]', err)
@@ -70,5 +71,8 @@ app.listen(port, () => {
     import('./cron/notifications.js').then(({ startNotificationCrons }) => {
       startNotificationCrons(bot)
     }).catch(e => console.error('[cron] start error:', e.message))
+    import('./cron/subscriptions.js').then(({ startSubscriptionCron }) => {
+      startSubscriptionCron(bot)
+    }).catch(e => console.error('[cron] subscriptions error:', e.message))
   }).catch(e => console.error('[bot] import error:', e.message))
 })

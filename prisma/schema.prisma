@@ -91,6 +91,7 @@ model User {
   supportConversations SupportConversation[]
   supportRatings       SupportRating[]
   aiUsage              AIUsage[]
+  subscriptions        Subscription[]
   enrolledAt           DateTime?
 }
 
@@ -431,4 +432,29 @@ enum SupportSenderRole {
   MEMBER
   ADMIN
   AI
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  SUSPENDED
+  EXPIRED
+  CANCELLED
+}
+
+model Subscription {
+  id        String             @id @default(cuid())
+  userId    String
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status    SubscriptionStatus @default(ACTIVE)
+  startDate DateTime           @default(now())
+  endDate   DateTime
+  amount    Decimal            @default(99) @db.Decimal(10,2)
+  currency  String             @default("EUR")
+  notes     String?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@index([userId])
+  @@index([endDate])
+  @@index([status])
 }

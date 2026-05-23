@@ -30,7 +30,12 @@ export async function notifyMember(bot, user, kind, payload = {}) {
         text = `🎖 <b>Anniversario di arruolamento</b>\n${y} ${y === 1 ? 'anno' : 'anni'} al servizio del Comando Voltra. Onore a te, ${escapeHtml(user.name || user.email)}.`
         break
       }
-      case 'support_closed':
+      case 'subscription_expiring':
+        text = `⚠️ <b>Abbonamento in scadenza</b>\nIl tuo abbonamento scade tra <b>${payload.days} ${payload.days === 1 ? 'giorno' : 'giorni'}</b>.\nContatta il Comando per il rinnovo.`
+        break
+      case 'subscription_expired':
+        text = `🔴 <b>Abbonamento scaduto</b>\nIl tuo abbonamento è scaduto.\nContatta il Comando per rinnovare l'accesso.`
+        break
         text = `✅ Ticket di supporto chiuso. Come valuteresti il supporto ricevuto?`
         extra.reply_markup = new InlineKeyboard()
           .text('⭐', `rate:${payload.conversationId}:1`)

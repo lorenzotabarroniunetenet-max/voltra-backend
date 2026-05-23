@@ -15,7 +15,7 @@ import { handleMemberRank, handleMemberMission, handleMemberPayout, handleMember
 import { handleStats, handleBroadcastStart, handleBroadcastText, handleBroadcastConfirm, handleBroadcastAI, handleBroadcastManual, handleBroadcastRegen } from './handlers/stats.js'
 import { buildSupportHandlers, supportReplyConvo } from './handlers/support.js'
 import { buildSettingsHandlers, addModeratorConvo, sendDirectMessageConvo, setWelcomeMessageConvo } from './handlers/settings.js'
-import { buildAIFilter } from './handlers/aiFilter.js'
+import { buildSubscriptionHandlers } from './handlers/subscriptions.js'
 import { notifyMember } from './notify.js'
 
 if (!process.env.TELEGRAM_BOT_TOKEN) {
@@ -52,6 +52,7 @@ if (bot) {
   // 4) Handlers composti
   bot.use(buildSupportHandlers(bot, auth))
   bot.use(buildSettingsHandlers(bot, auth))
+  bot.use(buildSubscriptionHandlers(auth))
 
   // ── COMMANDS ──
   bot.command('start', handleStart)
@@ -231,6 +232,7 @@ function buildAdminHomeKb() {
     .text('💰 Rimborsi', 'v1:sec:payouts').row()
     .text('⚔️ Missioni', 'v1:sec:missions').row()
     .text('👥 Membri', 'v1:sec:members').row()
+    .text('💳 Abbonamenti', 'v1:sec:subs').row()
     .text('💬 Supporto', 'v1:sec:support').row()
     .text('📊 Rapporto', 'v1:sec:stats').text('⚙️ Impostazioni', 'v1:sec:settings').row()
     .text('📢 Ordine del Giorno', 'v1:sec:broadcast').row()
