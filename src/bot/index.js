@@ -289,6 +289,22 @@ if (bot) {
 
     // Membri
     if ((m = data.match(/^v1:mem:view:(.+)$/))) { if (!(await isAdmin(ctx))) { await ctx.answerCallbackQuery({ text: '⛔', show_alert: true }); return } await handleMemberView(ctx, m[1]); return }
+    if ((m = data.match(/^v1:mem:sub:(.+)$/))) {
+      if (!(await isAdmin(ctx))) { await ctx.answerCallbackQuery({ text: '⛔', show_alert: true }); return }
+      await ctx.answerCallbackQuery()
+      const userId = m[1]
+      const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, matricola: true } })
+      if (!user) { await ctx.editMessageText('Membro non trovato.', { reply_markup: new InlineKeyboard().text('← Membri', 'v1:sec:members') }); return }
+      // Crea abbonamento di 1 mese a €99
+      const endDate = new Date(); endDate.setMonth(endDate.getMonth() + 1)
+      await prisma.subscription.create({ data: { userId, endDate, amount: 99, status: 'ACTIVE' } })
+      await ctx.editMessageText(
+        `✅ <b>Abbonamento creato</b>\n\n👤 <b>${escapeHtml(user.name)}</b> · <code>${escapeHtml(user.matricola || '—')}</code>\n💳 €99/mese · scadenza: <b>${endDate.toLocaleDateString('it-IT')}</b>`,
+        { parse_mode: 'HTML', reply_markup: new InlineKeyboard().text('💳 Abbonamenti', 'v1:sec:subs').text('← Membri', 'v1:sec:members') }
+      )
+      return
+    }
+
     if ((m = data.match(/^v1:mem:msg:(.+)$/))) {
       if (!(await isAdmin(ctx))) { await ctx.answerCallbackQuery({ text: '⛔', show_alert: true }); return }
       await ctx.answerCallbackQuery()
@@ -370,7 +386,7 @@ function buildAdminHomeKb() {
     .text('💬 Supporto', 'v1:sec:support').row()
     .text('📊 Rapporto', 'v1:sec:stats').text('⚙️ Impostazioni', 'v1:sec:settings').row()
     .text('📢 Ordine del Giorno', 'v1:sec:broadcast').row()
-    .text('📖 Guida Admin', 'v1:guida')
+    .text('📖 Guida', 'v1:guida')
 }
 
 async function handleMembersList(ctx) {
@@ -420,6 +436,7 @@ async function handleMemberView(ctx, userId) {
     `\nArruolato: ${new Date(user.createdAt).toLocaleDateString('it-IT')}`
   const kb = new InlineKeyboard()
   if (user.telegramChatId) kb.text('💬 Invia messaggio', `v1:mem:msg:${userId}`).row()
+  kb.text('💳 Crea abbonamento', `v1:mem:sub:${userId}`).row()
   kb.text('← Membri', 'v1:sec:members')
   await ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup: kb })
 }
