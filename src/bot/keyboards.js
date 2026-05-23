@@ -25,7 +25,7 @@ export function memberHomeKeyboard(linked = true) {
     .text('⚔️ Stato missione', 'v1:me:mission').row()
     .text('💰 Prossimo rimborso', 'v1:me:payout').row()
     .text('📨 Supporto', 'v1:me:support').row()
-    .text('❓ FAQ', 'v1:me:faq').row()
+    .text('❓ FAQ', 'v1:me:faq').text('📖 Guida', 'v1:guida').row()
 }
 
 // Ordini

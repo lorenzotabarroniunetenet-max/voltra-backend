@@ -56,7 +56,7 @@ if (bot) {
   bot.use(buildSubscriptionHandlers(auth))
 
   // ── Exit conversations su qualsiasi comando ──
-  bot.command(['menu', 'start', 'annulla'], async (ctx, next) => {
+  bot.command(['menu', 'start', 'annulla', 'guida'], async (ctx, next) => {
     await ctx.conversation.exit().catch(() => {})
     return next()
   })
@@ -83,11 +83,77 @@ if (bot) {
   bot.command('whoami', async (ctx) => {
     const admin = await isAdmin(ctx)
     const mod = await isMod(ctx)
+    const superadmin = await isSuperAdmin(ctx)
     await ctx.reply(
       `🪪 <b>La tua identità Telegram</b>\n\nChat ID: <code>${ctx.from.id}</code>\nUsername: @${escapeHtml(ctx.from.username || 'nessuno')}\nNome: ${escapeHtml(ctx.from.first_name || '')}` +
-      (admin ? '\n\n⚡ <b>Sei Superadmin Voltra</b>' : mod ? '\n\n🛡 <b>Sei Moderatore Voltra</b>' : ''),
+      (superadmin ? '\n\n⚡ <b>Sei Superadmin Voltra</b>' : admin ? '\n\n🛡 <b>Sei Admin Voltra</b>' : mod ? '\n\n🔧 <b>Sei Moderatore Voltra</b>' : ''),
       { parse_mode: 'HTML' }
     )
+  })
+
+  bot.command('guida', async (ctx) => {
+    await ctx.conversation.exit().catch(() => {})
+    const admin = await isAdmin(ctx)
+
+    if (admin) {
+      await ctx.reply(
+        `📖 <b>Guida Admin — @voltra_comandoBot</b>\n\n` +
+        `<b>Comandi:</b>\n` +
+        `/menu — Centro di Comando\n` +
+        `/whoami — Il tuo Chat ID e ruolo\n` +
+        `/annulla — Interrompe operazioni in corso\n\n` +
+        `<b>Menu principale:</b>\n` +
+        `🎖 Promozioni — Approva/rifiuta ordini\n` +
+        `💰 Rimborsi — Approva/rifiuta payout\n` +
+        `⚔️ Missioni — Cambia stato + sblocca rimborso\n` +
+        `👥 Membri — Scheda membro + messaggio diretto\n` +
+        `💳 Abbonamenti — Lista, rinnovi, scadenze\n` +
+        `💬 Supporto — Inbox conversazioni membri\n` +
+        `📊 Rapporto — Stats live del club\n` +
+        `📢 OdG — Broadcast + generazione AI\n` +
+        `⚙️ Impostazioni — Solo Superadmin\n\n` +
+        `<b>Come funziona il flusso:</b>\n` +
+        `1. Membro carica versamento → ti arriva notifica\n` +
+        `2. Tap Approva/Rifiuta direttamente dalla notifica\n` +
+        `3. Al rifiuto il sistema chiede il motivo (obbligatorio)\n` +
+        `4. Il membro riceve notifica Telegram + email automatica\n\n` +
+        `<b>OdG con AI:</b>\n` +
+        `Menu → 📢 OdG → 🤖 Genera con AI → scrivi 2-3 parole → anteprima → Invia a tutti\n\n` +
+        `<b>Abbonamenti:</b>\n` +
+        `Ogni mattina 09:30 ricevi riepilogo scadenze automatico.\n\n` +
+        `<i>Per la guida completa: voltrasolutions.com/guida</i>`,
+        { parse_mode: 'HTML' }
+      )
+    } else {
+      await ctx.reply(
+        `📖 <b>Guida — @voltra_comandoBot</b>\n\n` +
+        `<b>Primo accesso:</b>\n` +
+        `Vai su voltrasolutions.com → Personale → Collega Telegram → tap il link → START\n\n` +
+        `<b>Comandi:</b>\n` +
+        `/menu — Il tuo menu personale\n` +
+        `/annulla — Interrompe operazioni in corso\n\n` +
+        `<b>Cosa trovi nel menu:</b>\n` +
+        `🎖 Il mio grado — Grado attuale e matricola\n` +
+        `⚔️ Stato missione — La tua missione in tempo reale\n` +
+        `💰 Rimborso — Solo quando sbloccato dal Comando\n` +
+        `📨 Supporto — Scrivi al Comando\n` +
+        `❓ FAQ — Domande frequenti\n\n` +
+        `<b>Notifiche automatiche:</b>\n` +
+        `✅ Promozione approvata/rifiutata\n` +
+        `🎯 Cambio stato missione\n` +
+        `💰 Rimborso sbloccato\n` +
+        `💬 Risposta supporto dal Comando\n` +
+        `⚠️ Abbonamento in scadenza (7gg prima)\n` +
+        `📢 Ordini del Giorno ufficiali\n\n` +
+        `<b>Supporto:</b>\n` +
+        `Scrivi qualsiasi messaggio al bot. L'AI risponde alle domande generali. I problemi operativi vengono inoltrati al Comando entro 24h.\n\n` +
+        `<b>Rimborso:</b>\n` +
+        `Ricevi notifica quando disponibile. Menu → 💰 Rimborso → inserisci wallet → conferma. Copia e incolla sempre il wallet, non scrivere a mano.\n\n` +
+        `<b>Per tutto il resto:</b>\n` +
+        `Nuove missioni, documenti, giochi → voltrasolutions.com`,
+        { parse_mode: 'HTML' }
+      )
+    }
   })
 
   // ── CALLBACKS ──
@@ -114,6 +180,62 @@ if (bot) {
     }
 
     if (data === 'v1:nop') { await ctx.answerCallbackQuery(); return }
+
+    if (data === 'v1:guida') {
+      await ctx.answerCallbackQuery()
+      const admin = await isAdmin(ctx)
+      if (admin) {
+        await ctx.reply(
+          `📖 <b>Guida Admin</b>\n\n` +
+          `<b>Comandi:</b>\n/menu · /whoami · /annulla\n\n` +
+          `<b>Sezioni menu:</b>\n` +
+          `🎖 Promozioni — approva/rifiuta ordini\n` +
+          `💰 Rimborsi — approva/rifiuta payout\n` +
+          `⚔️ Missioni — cambia stato + sblocca rimborso\n` +
+          `👥 Membri — scheda + messaggio diretto\n` +
+          `💳 Abbonamenti — rinnovi, scadenze\n` +
+          `💬 Supporto — inbox conversazioni\n` +
+          `📊 Rapporto — stats live\n` +
+          `📢 OdG — broadcast + AI\n` +
+          `⚙️ Impostazioni — solo Superadmin\n\n` +
+          `<b>Flusso promozione:</b>\n` +
+          `Membro carica versamento → notifica → Approva/Rifiuta → membro notificato auto\n\n` +
+          `<b>OdG AI:</b>\n` +
+          `📢 → 🤖 Genera con AI → 2-3 parole → anteprima → Invia a tutti\n\n` +
+          `<b>Abbonamenti:</b>\n` +
+          `Riepilogo scadenze automatico ogni mattina 09:30\n\n` +
+          `<i>Guida completa: voltrasolutions.com/guida</i>`,
+          { parse_mode: 'HTML', reply_markup: new InlineKeyboard().text('← Home', 'v1:home') }
+        )
+      } else {
+        await ctx.reply(
+          `📖 <b>Guida Membro</b>\n\n` +
+          `<b>Primo accesso:</b>\n` +
+          `voltrasolutions.com → Personale → Collega Telegram → tap link → START\n\n` +
+          `<b>Comandi:</b>\n/menu · /annulla\n\n` +
+          `<b>Menu personale:</b>\n` +
+          `🎖 Il mio grado\n` +
+          `⚔️ Stato missione\n` +
+          `💰 Rimborso (solo se sbloccato)\n` +
+          `📨 Supporto\n\n` +
+          `<b>Notifiche automatiche:</b>\n` +
+          `✅ Promozione approvata/rifiutata\n` +
+          `🎯 Cambio stato missione\n` +
+          `💰 Rimborso sbloccato\n` +
+          `💬 Risposta dal Comando\n` +
+          `⚠️ Abbonamento in scadenza\n` +
+          `📢 Ordini del Giorno\n\n` +
+          `<b>Supporto:</b>\n` +
+          `Scrivi qualsiasi messaggio al bot. L'AI risponde alle domande generali, i problemi vanno al Comando.\n\n` +
+          `<b>Rimborso:</b>\n` +
+          `Menu → 💰 → inserisci wallet → conferma. Copia e incolla sempre il wallet.\n\n` +
+          `<b>Resto delle funzioni:</b>\n` +
+          `Nuove missioni, documenti, giochi → voltrasolutions.com`,
+          { parse_mode: 'HTML', reply_markup: new InlineKeyboard().text('← Menu', 'v1:member:home') }
+        )
+      }
+      return
+    }
 
     // Admin sections
     if (data === 'v1:sec:orders') { if (!(await isMod(ctx))) { await ctx.answerCallbackQuery({ text: '⛔', show_alert: true }); return } await handleOrdersList(ctx); return }
@@ -248,6 +370,7 @@ function buildAdminHomeKb() {
     .text('💬 Supporto', 'v1:sec:support').row()
     .text('📊 Rapporto', 'v1:sec:stats').text('⚙️ Impostazioni', 'v1:sec:settings').row()
     .text('📢 Ordine del Giorno', 'v1:sec:broadcast').row()
+    .text('📖 Guida Admin', 'v1:guida')
 }
 
 async function handleMembersList(ctx) {
