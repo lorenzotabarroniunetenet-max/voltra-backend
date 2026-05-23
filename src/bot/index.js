@@ -54,10 +54,21 @@ if (bot) {
   bot.use(buildSettingsHandlers(bot, auth))
   bot.use(buildSubscriptionHandlers(auth))
 
+  // ── Exit conversations su qualsiasi comando ──
+  bot.command(['menu', 'start', 'annulla'], async (ctx, next) => {
+    await ctx.conversation.exit().catch(() => {})
+    return next()
+  })
+
   // ── COMMANDS ──
-  bot.command('start', handleStart)
+  bot.command('start', async (ctx) => {
+    await ctx.conversation.exit().catch(() => {})
+    return handleStart(ctx)
+  })
 
   bot.command('menu', async (ctx) => {
+    // Cancella eventuali conversations pendenti
+    await ctx.conversation.exit().catch(() => {})
     const admin = await isAdmin(ctx)
     if (admin) return sendAdminHome(ctx)
     const user = await prisma.user.findFirst({ where: { telegramChatId: String(ctx.from.id) } })

@@ -153,7 +153,6 @@ export async function handleBroadcastConfirm(ctx) {
       title: 'Ordine del Giorno',
       content: draft.text,
       pinned: false,
-      aiGenerated: draft.mode === 'ai',
     }
   }).catch(() => {}) // graceful se campo aiGenerated non esiste ancora
 
