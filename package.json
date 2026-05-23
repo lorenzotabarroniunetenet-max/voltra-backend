@@ -1,6 +1,6 @@
 {
   "name": "voltra-backend",
-  "version": "3.2.0",
+  "version": "3.15.1",
   "type": "module",
   "main": "src/server.js",
   "scripts": {

@@ -16,6 +16,7 @@ import { handleStats, handleBroadcastStart, handleBroadcastText, handleBroadcast
 import { buildSupportHandlers, supportReplyConvo } from './handlers/support.js'
 import { buildSettingsHandlers, addModeratorConvo, sendDirectMessageConvo, setWelcomeMessageConvo } from './handlers/settings.js'
 import { buildSubscriptionHandlers } from './handlers/subscriptions.js'
+import { buildAIFilter } from './handlers/aiFilter.js'
 import { notifyMember } from './notify.js'
 
 if (!process.env.TELEGRAM_BOT_TOKEN) {
