@@ -297,7 +297,7 @@ r.get('/users/:id', async (req, res) => {
         id: true, name: true, email: true, role: true, emailVerified: true,
         kycVerifiedAt: true, telegramChatId: true, notes: true, createdAt: true,
         rank: true, matricola: true, enlistedAt: true, approved: true, approvedAt: true,
-        email2faEnabled: true, purchaseCount: true,
+        email2faEnabled: true, purchaseCount: true, memberNumber: true, oathDone: true,
         propAccounts: {
           include: {
             program: true,
@@ -984,6 +984,19 @@ r.patch('/tickets/:id', async (req, res) => {
       data: { status },
     })
     res.json(ticket)
+  } catch (e) { res.status(400).json({ error: e.message }) }
+})
+
+// ── Admin: oath status + force ──
+r.patch('/users/:id/oath', async (req, res) => {
+  try {
+    const { oathDone } = req.body
+    const u = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { oathDone: !!oathDone },
+      select: { id: true, name: true, oathDone: true },
+    })
+    res.json(u)
   } catch (e) { res.status(400).json({ error: e.message }) }
 })
 

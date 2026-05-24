@@ -228,4 +228,20 @@ r.post('/documents/:id/sign', async (req, res) => {
   } catch (e) { res.status(404).json({ error: 'not found' }) }
 })
 
+// ── Oath ──
+r.get('/oath', async (req, res) => {
+  const u = await prisma.user.findUnique({ where: { id: req.user.id }, select: { oathDone: true } })
+  res.json({ oathDone: u?.oathDone || false })
+})
+
+r.post('/oath/complete', async (req, res) => {
+  await prisma.user.update({ where: { id: req.user.id }, data: { oathDone: true } })
+  res.json({ ok: true })
+})
+
+r.delete('/oath', async (req, res) => {
+  await prisma.user.update({ where: { id: req.user.id }, data: { oathDone: false } })
+  res.json({ ok: true })
+})
+
 export default r

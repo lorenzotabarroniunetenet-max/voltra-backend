@@ -77,6 +77,7 @@ model User {
   showInAlbo        Boolean      @default(true)
   purchaseCount     Int          @default(0)
   memberNumber      Int?         @unique
+  oathDone          Boolean      @default(false)
   createdAt         DateTime     @default(now())
   propAccounts      PropAccount[]
   payoutRequests    PayoutRequest[]
