@@ -994,8 +994,19 @@ r.patch('/users/:id/oath', async (req, res) => {
     const u = await prisma.user.update({
       where: { id: req.params.id },
       data: { oathDone: !!oathDone },
-      select: { id: true, name: true, oathDone: true },
+      select: { id: true, name: true, oathDone: true, rank: true, telegramChatId: true },
     })
+    // Se forza il giuramento (oathDone=false), notifica il membro su Telegram
+    if (!oathDone && u.telegramChatId) {
+      const rank = u.rank || 'Membro'
+      try {
+        const { bot } = await import('../bot/index.js')
+        await bot.api.sendMessage(Number(u.telegramChatId),
+          `⚔️ <b>Ordine dal Comando</b>\n\n${rank} <b>${u.name}</b>, il Comando richiede che tu rinnovi il tuo giuramento.\n\nAccedi al sito per completare la cerimonia.\n\n<i>voltrasolutions.com/dashboard</i>`,
+          { parse_mode: 'HTML' }
+        )
+      } catch (e) { console.warn('[oath] telegram notify failed:', e.message) }
+    }
     res.json(u)
   } catch (e) { res.status(400).json({ error: e.message }) }
 })
