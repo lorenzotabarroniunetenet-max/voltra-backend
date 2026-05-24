@@ -324,3 +324,70 @@ export async function sendTicketEmail({ user, category, subject, message }) {
     })
   } catch (e) { console.error('[email] ticket failed:', e.message) }
 }
+
+// ── Onboarding sequenza ──
+export async function sendOnboardingEmail(email, { name, rank, matricola, day }) {
+  if (!resend) return
+  const { from, support } = await getEmailConfig()
+
+  const configs = {
+    1: {
+      subject: `🎖 Il tuo primo giorno nel Comando, ${rank}`,
+      accent: '#B4FF39',
+      title: `Sei dentro, <span style="color:#B4FF39">${rank}.</span>`,
+      intro: `${name}, il tuo primo giorno nel Comando è qui. Non perderlo in giro — entra, guarda dove si trova tutto, inizia a familiarizzare con il Quartier Generale.`,
+      steps: [
+        'Accedi al <strong style="color:#fff">Quartier Generale</strong> — è la tua home base. Vedi lo stato della tua missione in tempo reale.',
+        'Leggi il <strong style="color:#fff">Codice di Condotta</strong> — è vincolante. Non saltarlo.',
+        'Vai su <strong style="color:#fff">Promozione di Grado</strong> quando sei pronto ad avviare la tua prima missione.',
+      ],
+      cta: 'Entra nel Quartier Generale →',
+    },
+    3: {
+      subject: `✈️ Hai collegato Telegram, ${name}?`,
+      accent: '#E8C84A',
+      title: `Hai collegato <span style="color:#E8C84A">Telegram?</span>`,
+      intro: `${name}, tre giorni fa sei entrato nel Comando. Se non hai ancora collegato il bot Telegram, stai perdendo notifiche importanti — approvazioni, cambi di stato missione, comunicati ufficiali.`,
+      steps: [
+        'Vai su <strong style="color:#fff">Personale</strong> nel sito',
+        'Tap <strong style="color:#fff">Collega Telegram</strong> — si apre @voltra_comandoBot',
+        'Tap <strong style="color:#fff">START</strong> — collegamento confermato in 30 secondi',
+      ],
+      cta: 'Vai su Personale →',
+    },
+    7: {
+      subject: `📊 Prima settimana nel Comando — come va, ${rank}?`,
+      accent: '#36a2eb',
+      title: `Prima settimana <span style="color:#36a2eb">completata.</span>`,
+      intro: `${name}, sette giorni nel Comando. Il Comando ti ha tenuto d\'occhio — non è una minaccia, è quello che facciamo con chi entra nella squadra.`,
+      steps: [
+        'Se hai dubbi operativi: <strong style="color:#fff">Linea Diretta HQ</strong> è sempre aperta',
+        'Il <strong style="color:#fff">Tiro del Comando</strong> si fa ogni giorno — non saltarlo',
+        'Quando sei pronto: avvia la tua prima <strong style="color:#fff">Missione</strong>',
+      ],
+      cta: 'Torna al Quartier Generale →',
+    },
+  }
+
+  const c = configs[day]
+  if (!c) return
+
+  const stepsHtml = c.steps.map((s, i) => `
+    <tr>
+      <td style="width:28px;vertical-align:top;padding:5px 10px 5px 0">
+        <div style="width:20px;height:20px;border-radius:50%;background:rgba(180,255,57,.08);border:1px solid rgba(180,255,57,.2);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:${c.accent};text-align:center;line-height:20px">${i + 1}</div>
+      </td>
+      <td style="padding:5px 0;font-size:13px;color:#aaa;line-height:1.55">${s}</td>
+    </tr>`).join('')
+
+  const content = `
+    <p style="font-size:14px;color:#aaa;line-height:1.8;margin-bottom:18px">${c.intro}</p>
+    <table cellpadding="0" cellspacing="0" style="width:100%;margin:18px 0">${stepsHtml}</table>
+    <p style="margin-top:24px"><strong style="color:#fff">Il Comando</strong><br><span style="color:#555">Voltra</span></p>`
+
+  const html = premiumTemplate(c.title, content, 'https://voltrasolutions.com/dashboard', c.cta, support, c.accent)
+
+  try {
+    await resend.emails.send({ from, to: email, subject: c.subject, html, replyTo: support })
+  } catch (e) { console.error(`[email] onboarding day${day} failed:`, e.message) }
+}

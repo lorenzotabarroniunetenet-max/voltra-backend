@@ -76,6 +76,7 @@ model User {
   email2faNudgeOff  Boolean      @default(false)
   showInAlbo        Boolean      @default(true)
   purchaseCount     Int          @default(0)
+  memberNumber      Int?         @unique
   createdAt         DateTime     @default(now())
   propAccounts      PropAccount[]
   payoutRequests    PayoutRequest[]

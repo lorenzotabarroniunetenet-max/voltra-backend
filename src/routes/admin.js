@@ -221,6 +221,14 @@ r.post('/users/:id/approve', async (req, res) => {
     const now = new Date()
     const matricola = target.matricola || `VLT-${target.id.slice(-4).toUpperCase()}`
 
+    // Assegna numero di serie progressivo
+    const lastMember = await prisma.user.findFirst({
+      where: { memberNumber: { not: null } },
+      orderBy: { memberNumber: 'desc' },
+      select: { memberNumber: true },
+    })
+    const memberNumber = (lastMember?.memberNumber || 0) + 1
+
     const user = await prisma.user.update({
       where: { id: req.params.id },
       data: {
@@ -230,6 +238,7 @@ r.post('/users/:id/approve', async (req, res) => {
         matricola: target.matricola || matricola,
         enlistedAt: target.enlistedAt || now,
         rank: target.rank || 'Caporale',
+        memberNumber,
       },
     })
 

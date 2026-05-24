@@ -74,6 +74,9 @@ app.listen(port, () => {
     import('./cron/subscriptions.js').then(({ startSubscriptionCron }) => {
       startSubscriptionCron(bot)
     }).catch(e => console.error('[cron] subscriptions error:', e.message))
+    import('./cron/onboarding.js').then(({ startOnboardingCron }) => {
+      startOnboardingCron()
+    }).catch(e => console.error('[cron] onboarding error:', e.message))
   }).catch(e => console.error('[bot] import error:', e.message))
 })
 // build 1779525023
@@ -83,3 +86,5 @@ app.listen(port, () => {
 // build 1779526733
 // build 1779526909
 // build 1779527194
+// build 1779541409
+// build 1779607940

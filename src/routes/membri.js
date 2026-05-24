@@ -79,6 +79,7 @@ r.get('/dossier', async (req, res) => {
     lore,
     enlistedAt,
     daysOfService,
+    memberNumber: user.memberNumber || null,
     purchaseCount: user.purchaseCount || 0,
     decorations: user.decorations.map(d => ({
       id: d.id,
