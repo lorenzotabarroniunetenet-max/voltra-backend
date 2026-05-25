@@ -123,6 +123,39 @@ r.patch('/accounts/:id', async (req, res) => {
           programName: account.program?.name || '',
           accountSize: account.startBalance,
         }).catch(() => {})
+
+        // Crea automaticamente richiesta margine €350
+        try {
+          // Revoca eventuali richieste precedenti
+          await prisma.marginRequest.updateMany({
+            where: { userId: account.userId, status: 'PENDING' },
+            data: { status: 'REVOKED' },
+          })
+          await prisma.marginRequest.create({
+            data: { userId: account.userId, amount: 350, currency: 'EUR', status: 'PENDING' },
+          })
+          // Notifica Telegram
+          const member = await prisma.user.findUnique({
+            where: { id: account.userId },
+            select: { telegramChatId: true, name: true, rank: true },
+          })
+          if (member?.telegramChatId) {
+            const { bot } = await import('../bot/index.js')
+            const rank = member.rank || 'Membro'
+            await bot.api.sendMessage(Number(member.telegramChatId),
+              `🎯 <b>Missione superata, ${rank}!</b>\n\n` +
+              `Complimenti ${member.name} — la tua missione <b>${account.program?.name || ''}</b> è stata superata con successo.\n\n` +
+              `📋 <b>Prossimo step obbligatorio</b>\n` +
+              `Come previsto dal contratto operativo, è richiesto il versamento di un <b>margine aggiuntivo di €350</b> per procedere alla fase successiva.\n\n` +
+              `Accedi alla piattaforma per completare il pagamento:\n` +
+              `<i>voltrasolutions.com/margine</i>`,
+              { parse_mode: 'HTML' }
+            ).catch(e => console.warn('[margin] telegram failed:', e.message))
+          }
+        } catch (e) {
+          console.error('[margin] auto-create failed:', e.message)
+        }
+
       } else if (data.status === 'FAILED') {
         sendMissionFailedEmail(account.user.email, {
           name: account.user.name,
