@@ -212,6 +212,8 @@ model TradeLog {
   createdAt DateTime @default(now())
   @@index([userId, createdAt])
 }
+
+model Ceremony {
   id              String    @id @default(cuid())
   userId          String
   type            String
