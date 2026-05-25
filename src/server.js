@@ -9,6 +9,7 @@ import contactRoutes from './routes/contact.js'
 import membriRoutes from './routes/membri.js'
 import aiRoutes from './routes/ai.js'
 import telegramRoutes from './routes/telegram.js'
+import certificatoRoutes from './routes/certificato.js'
 
 const app = express()
 app.set('trust proxy', 1)
@@ -35,6 +36,7 @@ app.use('/api/contact', contactRoutes)
 app.use('/api/membri', membriRoutes)
 app.use('/api/ai', aiRoutes)
 app.use('/api/telegram', telegramRoutes)
+app.use('/api/certificato', certificatoRoutes)
 app.use('/api/subscriptions', (await import('./routes/subscriptions.js')).default)
 
 app.use((err, req, res, next) => {
@@ -93,3 +95,4 @@ app.listen(port, () => {
 // build 1779615046
 // build 1779697822
 // build 1779698720
+// build 1779699685
