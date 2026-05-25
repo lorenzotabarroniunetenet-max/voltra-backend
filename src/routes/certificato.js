@@ -11,7 +11,7 @@ r.get('/pdf', requireAuth, async (req, res) => {
       where: { id: req.user.id },
       select: {
         name: true, rank: true, matricola: true, memberNumber: true,
-        enrolledAt: true, membershipTxHash: true, membershipTokenId: true,
+        enrolledAt: true, approvedAt: true, membershipTxHash: true, membershipTokenId: true,
         oathDone: true,
       },
     })
@@ -39,19 +39,19 @@ r.get('/pdf', requireAuth, async (req, res) => {
     // Linea lime in cima
     doc.moveTo(60, 4).lineTo(W - 60, 4).lineWidth(1).stroke(LIME)
 
-    // VOLTRA logo area
+    // VOLTRA logo
     doc.fontSize(11).font('Helvetica-Bold')
-      .fillColor(LIME).text('⚡ VOLTRA', 54, 28, { continued: false })
+      .fillColor(LIME).text('VOLTRA', 54, 28)
 
     doc.fontSize(7).font('Helvetica')
       .fillColor('rgba(180,255,57,0.5)')
       .text('CLUB PRIVATO · DOCUMENTO UFFICIALE', 54, 44, { characterSpacing: 2 })
 
     // Classificato badge
-    doc.roundedRect(W - 160, 26, 106, 20, 3)
+    doc.roundedRect(W - 156, 26, 100, 20, 3)
       .strokeColor('rgba(255,255,255,0.15)').lineWidth(1).stroke()
     doc.fontSize(7).font('Helvetica')
-      .fillColor('rgba(255,255,255,0.3)').text('DOCUMENTO RISERVATO', W - 155, 32, { characterSpacing: 1 })
+      .fillColor('rgba(255,255,255,0.3)').text('DOC. RISERVATO', W - 150, 32, { characterSpacing: 1 })
 
     // Tipo certificato
     doc.fontSize(8).font('Helvetica-Bold')
@@ -73,26 +73,25 @@ r.get('/pdf', requireAuth, async (req, res) => {
 
     // ── BODY ──
     const bodyY = 196
-
-    // Testo principale
-    const enrollDate = user.enrolledAt
-      ? new Date(user.enrolledAt).toLocaleDateString('it-IT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+    const enrollDate = (user.enrolledAt || user.approvedAt)
+      ? new Date(user.enrolledAt || user.approvedAt).toLocaleDateString('it-IT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
       : 'data non disponibile'
 
     doc.fontSize(11).font('Helvetica')
       .fillColor('rgba(255,255,255,0.55)')
       .text(
-        `Il presente certificato attesta che ${user.name} ha prestato giuramento davanti al Comando Voltra in data ${enrollDate} ed è membro a tutti gli effetti del club privato, con il grado di ${user.rank || 'Caporale'}. Il suo arruolamento è registrato in modo permanente sulla blockchain Polygon e non può essere alterato o cancellato.`,
+        `Il presente certificato attesta che ${user.name} ha prestato giuramento davanti al Comando Voltra in data ${enrollDate} ed e membro a tutti gli effetti del club privato, con il grado di ${user.rank || 'Caporale'}. Il suo arruolamento e registrato in modo permanente sulla blockchain Polygon e non puo essere alterato o cancellato.`,
         54, bodyY, { width: 360, lineGap: 4 }
       )
 
     // ── DATI GRID ──
     const gridY = bodyY + 100
+    const enrolledDate = user.enrolledAt || user.approvedAt
     const cells = [
       { label: 'MATRICOLA', value: user.matricola || 'N/A' },
-      { label: 'MEMBRO N°', value: user.memberNumber ? `#${String(user.memberNumber).padStart(3, '0')}` : 'N/A' },
+      { label: 'MEMBRO N.', value: user.memberNumber ? `#${String(user.memberNumber).padStart(3, '0')}` : 'N/A' },
       { label: 'GRADO', value: user.rank || 'Caporale' },
-      { label: 'ARRUOLATO IL', value: user.enrolledAt ? new Date(user.enrolledAt).toLocaleDateString('it-IT') : 'N/A' },
+      { label: 'ARRUOLATO IL', value: enrolledDate ? new Date(enrolledDate).toLocaleDateString('it-IT') : 'N/A' },
     ]
 
     cells.forEach((cell, i) => {
@@ -101,13 +100,10 @@ r.get('/pdf', requireAuth, async (req, res) => {
       const x = 54 + col * 240
       const y = gridY + row * 60
 
-      // Box
       doc.roundedRect(x, y, 220, 48, 3)
         .fillColor('#0a0a0a').fill()
       doc.roundedRect(x, y, 220, 48, 3)
         .strokeColor('rgba(255,255,255,0.07)').lineWidth(0.5).stroke()
-
-      // Bordo sinistro lime
       doc.rect(x, y, 3, 48).fillColor(LIME).fill()
 
       doc.fontSize(7).font('Helvetica')
@@ -115,7 +111,7 @@ r.get('/pdf', requireAuth, async (req, res) => {
         .text(cell.label, x + 12, y + 10, { characterSpacing: 1.5 })
 
       doc.fontSize(13).font('Helvetica-Bold')
-        .fillColor(cell.label === 'MEMBRO N°' ? LIME : '#FFFFFF')
+        .fillColor(cell.label === 'MEMBRO N.' ? LIME : '#FFFFFF')
         .text(cell.value, x + 12, y + 24)
     })
 
@@ -131,25 +127,18 @@ r.get('/pdf', requireAuth, async (req, res) => {
         .text('CERTIFICAZIONE BLOCKCHAIN', 54, chainY + 14, { characterSpacing: 2 })
 
       doc.fontSize(7).font('Helvetica')
-        .fillColor('rgba(255,255,255,0.2)')
-        .text('Rete:', 54, chainY + 30)
-      doc.fillColor('rgba(130,71,229,0.8)')
-        .text('Polygon PoS Mainnet', 90, chainY + 30)
+        .fillColor('rgba(255,255,255,0.2)').text('Rete:', 54, chainY + 30)
+      doc.fillColor('rgba(130,71,229,0.8)').text('Polygon PoS Mainnet', 90, chainY + 30)
 
-      doc.fillColor('rgba(255,255,255,0.2)')
-        .text('Token ID:', 54, chainY + 44)
-      doc.fillColor(LIME)
-        .text(`#${user.membershipTokenId || 'N/A'}`, 100, chainY + 44)
+      doc.fillColor('rgba(255,255,255,0.2)').text('Token ID:', 54, chainY + 44)
+      doc.fillColor(LIME).text(`#${user.membershipTokenId || 'N/A'}`, 100, chainY + 44)
 
-      doc.fillColor('rgba(255,255,255,0.2)')
-        .text('TX Hash:', 54, chainY + 58)
+      doc.fillColor('rgba(255,255,255,0.2)').text('TX Hash:', 54, chainY + 58)
       doc.fillColor('rgba(255,255,255,0.45)').fontSize(6)
         .text(user.membershipTxHash, 96, chainY + 60, { width: 300 })
 
-      const polygonscanUrl = `https://polygonscan.com/tx/${user.membershipTxHash}`
-      doc.fontSize(7).font('Helvetica')
-        .fillColor(LIME)
-        .text('Verifica su Polygonscan →', 54, chainY + 78)
+      doc.fontSize(7).font('Helvetica').fillColor(LIME)
+        .text('Verifica su Polygonscan ->', 54, chainY + 78)
     }
 
     // ── QR CODE ──
@@ -161,23 +150,17 @@ r.get('/pdf', requireAuth, async (req, res) => {
       })
       const qrBase64 = qrDataUrl.replace('data:image/png;base64,', '')
       const qrBuf = Buffer.from(qrBase64, 'base64')
+      const qrX = W - 54 - 100, qrY2 = chainY + 14
 
-      const qrX = W - 54 - 100, qrY = chainY + 14
-
-      // Box QR
-      doc.roundedRect(qrX - 8, qrY - 8, 116, 116, 6)
+      doc.roundedRect(qrX - 8, qrY2 - 8, 116, 116, 6)
         .fillColor('#050505').fill()
-      doc.roundedRect(qrX - 8, qrY - 8, 116, 116, 6)
+      doc.roundedRect(qrX - 8, qrY2 - 8, 116, 116, 6)
         .strokeColor(LIME).lineWidth(1).stroke()
+      doc.image(qrBuf, qrX, qrY2, { width: 100, height: 100 })
 
-      doc.image(qrBuf, qrX, qrY, { width: 100, height: 100 })
-
-      doc.fontSize(6).font('Helvetica')
-        .fillColor('rgba(180,255,57,0.5)')
-        .text('Scansiona per verificare', qrX - 8, qrY + 108, { width: 116, align: 'center' })
-    } catch (e) {
-      console.error('[cert] QR error:', e.message)
-    }
+      doc.fontSize(6).font('Helvetica').fillColor('rgba(180,255,57,0.5)')
+        .text('Scansiona per verificare', qrX - 8, qrY2 + 108, { width: 116, align: 'center' })
+    } catch (e) { console.error('[cert] QR error:', e.message) }
 
     // ── FIRMA ──
     const sigY = H - 140
@@ -185,42 +168,34 @@ r.get('/pdf', requireAuth, async (req, res) => {
     doc.moveTo(54, sigY).lineTo(W - 54, sigY).lineWidth(0.5)
       .stroke('rgba(255,255,255,0.06)')
 
-    // Firma membro
-    doc.fontSize(7).font('Helvetica')
-      .fillColor('rgba(255,255,255,0.2)')
+    doc.fontSize(7).font('Helvetica').fillColor('rgba(255,255,255,0.2)')
       .text('FIRMA DEL MEMBRO', 54, sigY + 14, { characterSpacing: 1.5 })
 
     doc.moveTo(54, sigY + 50).lineTo(220, sigY + 50).lineWidth(0.5)
       .stroke('rgba(255,255,255,0.12)')
 
-    doc.fontSize(14).font('Helvetica-Oblique')
-      .fillColor('rgba(255,255,255,0.4)')
+    doc.fontSize(14).font('Helvetica-Oblique').fillColor('rgba(255,255,255,0.4)')
       .text(user.name, 54, sigY + 28)
 
-    // Sigillo Comando
-    doc.fontSize(7).font('Helvetica')
-      .fillColor('rgba(255,255,255,0.2)')
+    // Sigillo
+    doc.fontSize(7).font('Helvetica').fillColor('rgba(255,255,255,0.2)')
       .text('IL COMANDO VOLTRA', W - 200, sigY + 14, { characterSpacing: 1.5 })
-
     doc.circle(W - 120, sigY + 40, 30)
       .strokeColor('rgba(180,255,57,0.3)').lineWidth(1).stroke()
     doc.circle(W - 120, sigY + 40, 24)
       .strokeColor('rgba(180,255,57,0.15)').lineWidth(0.5).stroke()
-    doc.fontSize(18).fillColor(LIME).text('⚡', W - 130, sigY + 28)
+    doc.fontSize(14).font('Helvetica-Bold').fillColor(LIME)
+      .text('V', W - 126, sigY + 32)
 
     // ── FOOTER ──
     doc.rect(0, H - 36, W, 36).fill('#050505')
-
     doc.moveTo(60, H - 36).lineTo(W - 60, H - 36).lineWidth(0.5)
       .stroke('rgba(180,255,57,0.3)')
 
-    doc.fontSize(7).font('Helvetica')
-      .fillColor('rgba(255,255,255,0.15)')
+    doc.fontSize(7).font('Helvetica').fillColor('rgba(255,255,255,0.15)')
       .text('SILENTIO AGIMUS', 54, H - 23, { characterSpacing: 3 })
-
     doc.fillColor('rgba(255,255,255,0.15)')
-      .text(`© ${new Date().getFullYear()} VOLTRA SOLUTIONS · voltrasolutions.com`, W / 2, H - 23, { align: 'center', width: 200 })
-
+      .text(`(c) ${new Date().getFullYear()} VOLTRA SOLUTIONS · voltrasolutions.com`, W / 2 - 100, H - 23)
     doc.fillColor('rgba(180,255,57,0.4)')
       .text('DOCUMENTO UFFICIALE', W - 170, H - 23, { characterSpacing: 1 })
 
