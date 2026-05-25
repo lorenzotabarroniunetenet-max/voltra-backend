@@ -274,6 +274,29 @@ r.post('/users/:id/approve', async (req, res) => {
     }).catch(() => {})
 
     sendApprovalEmail(user.email, user.name).catch(() => {})
+
+    // Blockchain — certifica ammissione (fire & forget, non blocca la risposta)
+    if (process.env.MEMBERSHIP_ADDRESS && process.env.PRIVATE_KEY) {
+      import('../lib/voltraChain.js').then(async ({ certifyMember }) => {
+        try {
+          const walletAddr = user.walletAddress || `0x${'0'.repeat(40)}` // zero address se non ha wallet
+          const { txHash, tokenId } = await certifyMember({
+            to: user.walletAddress || '0x000000000000000000000000000000000000dEaD',
+            name: user.name,
+            matricola: matricola,
+            grado: user.rank || 'Caporale',
+          })
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { membershipTokenId: tokenId, membershipTxHash: txHash },
+          })
+          console.log(`[blockchain] membership minted tokenId=${tokenId} tx=${txHash}`)
+        } catch (e) {
+          console.error('[blockchain] certifyMember failed:', e.message)
+        }
+      }).catch(() => {})
+    }
+
     res.json({ ok: true, user })
   } catch (e) { res.status(400).json({ error: e.message }) }
 })
@@ -456,6 +479,31 @@ async function approveOrderLogic(orderId, decidedBy) {
       programName: order.programName,
       accountSize: program.accountSize,
       brokerLogin: newAccount?.brokerLogin,
+    }).catch(() => {})
+  }
+
+  // Blockchain — certifica missione (fire & forget)
+  if (process.env.MISSION_ADDRESS && process.env.PRIVATE_KEY) {
+    import('../lib/voltraChain.js').then(async ({ certifyMission }) => {
+      try {
+        const fullMember = await prisma.user.findUnique({
+          where: { id: order.userId },
+          select: { walletAddress: true, matricola: true, rank: true },
+        })
+        const { txHash, tokenId, missionNo } = await certifyMission({
+          to: fullMember?.walletAddress || '0x000000000000000000000000000000000000dEaD',
+          matricola: fullMember?.matricola || order.userId.slice(-8).toUpperCase(),
+          grado: order.programName,
+          budgetUsd: Math.round(program?.accountSize || 10000),
+        })
+        await prisma.order.update({
+          where: { id: orderId },
+          data: { missionTokenId: tokenId, missionTxHash: txHash },
+        })
+        console.log(`[blockchain] mission minted tokenId=${tokenId} missionNo=${missionNo} tx=${txHash}`)
+      } catch (e) {
+        console.error('[blockchain] certifyMission failed:', e.message)
+      }
     }).catch(() => {})
   }
 

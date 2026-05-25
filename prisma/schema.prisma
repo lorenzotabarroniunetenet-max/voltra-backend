@@ -78,6 +78,9 @@ model User {
   purchaseCount     Int          @default(0)
   memberNumber      Int?         @unique
   oathDone          Boolean      @default(false)
+  walletAddress     String?
+  membershipTokenId String?
+  membershipTxHash  String?
   createdAt         DateTime     @default(now())
   propAccounts      PropAccount[]
   payoutRequests    PayoutRequest[]
@@ -328,6 +331,8 @@ model Order {
   txHash        String?
   receiptUrl    String?
   couponCode    String?
+  missionTokenId String?
+  missionTxHash  String?
   status        OrderStatus  @default(PENDING)
   approvalToken String?      @unique
   createdAt     DateTime     @default(now())
