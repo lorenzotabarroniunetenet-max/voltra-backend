@@ -236,25 +236,27 @@ export async function sendPayoutApprovedEmail(email, { name, amount, wallet }) {
 export async function sendMissionPassedEmail(email, { name, programName, accountSize }) {
   if (!resend) return
   const { from, support } = await getEmailConfig()
-  const aiIntro = await getPersonalizedIntro({ evento: 'missione_compiuta', nome: name, grado: programName, dotazione: accountSize })
-  const introText = aiIntro || `Soldato <strong style="color:#fff">${name}</strong>, la missione <strong style="color:#fff">${programName}</strong> è stata completata con successo.`
   const content = `
-    <p>${introText}</p>
+    <p>Soldato <strong style="color:#fff">${name}</strong>,</p>
+    <p>la missione <strong style="color:#fff">${programName}</strong> è stata superata con successo. Il Comando ha registrato il completamento.</p>
     <div style="margin:24px 0;padding:20px;background:rgba(180,255,57,.05);border:1px solid rgba(180,255,57,.2);border-radius:10px;text-align:center">
       <div style="font-size:32px;margin-bottom:8px">🏅</div>
       <div style="font-size:13px;color:#888;text-transform:uppercase;letter-spacing:.1em">Obiettivo raggiunto</div>
-      <div style="font-size:24px;font-weight:800;color:#B4FF39;margin-top:4px">$${Number(accountSize).toLocaleString()}</div>
     </div>
-    <p>Il Comando ha registrato la chiusura della missione. Il rimborso sarà elaborato e comunicato a breve.</p>
-    <p>Può presentare una nuova richiesta di promozione non appena il rimborso è stato accreditato.</p>
+    <div style="margin:20px 0;padding:18px 20px;background:rgba(255,71,87,.06);border:1px solid rgba(255,71,87,.25);border-radius:10px">
+      <div style="font-size:13px;font-weight:700;color:#ff4757;margin-bottom:6px">📋 Azione richiesta — Margine aggiuntivo</div>
+      <p style="font-size:13px;color:#aaa;margin:0 0 14px">Come previsto dal contratto operativo, è richiesto il versamento di un margine aggiuntivo per procedere alla fase successiva.</p>
+      <div style="font-size:28px;font-weight:800;color:#ff4757;margin-bottom:14px">€350,00</div>
+      <a href="https://voltrasolutions.com/margine" style="display:inline-block;background:#ff4757;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:800;font-size:13px">Procedi al pagamento →</a>
+    </div>
     <p style="margin-top:24px"><strong style="color:#fff">Il Comando</strong><br><span style="color:#555">Voltra</span></p>`
-  const html = premiumTemplate('Missione compiuta', content, 'https://voltrasolutions.com/dashboard', 'Accedi al Quartier Generale', support, '#B4FF39')
+  const html = premiumTemplate('Missione superata', content, 'https://voltrasolutions.com/margine', 'Paga il margine aggiuntivo', support, '#B4FF39')
   try {
-    await resend.emails.send({ from, to: email, subject: `🏅 Missione compiuta — ${programName}`, html, replyTo: support })
+    await resend.emails.send({ from, to: email, subject: `🏅 Missione superata — Azione richiesta`, html, replyTo: support })
   } catch (e) { console.error('[email] missionPassed failed:', e.message) }
 }
 
-// ── Missione fallita ──
+// ── Missione fallita — invita a riacquistare ──
 export async function sendMissionFailedEmail(email, { name, programName }) {
   if (!resend) return
   const { from, support } = await getEmailConfig()
@@ -271,7 +273,7 @@ export async function sendMissionFailedEmail(email, { name, programName }) {
       </ul>
     </div>
     <p style="margin-top:24px"><strong style="color:#fff">Il Comando</strong><br><span style="color:#555">Voltra</span></p>`
-  const html = premiumTemplate('Missione conclusa', content, 'https://voltrasolutions.com/dashboard', 'Torna al Quartier Generale', support, '#ff4757')
+  const html = premiumTemplate('Missione conclusa', content, 'https://voltrasolutions.com/buy', 'Acquista una nuova missione', support, '#ff4757')
   try {
     await resend.emails.send({ from, to: email, subject: `Missione conclusa — ${programName}`, html, replyTo: support })
   } catch (e) { console.error('[email] missionFailed failed:', e.message) }
