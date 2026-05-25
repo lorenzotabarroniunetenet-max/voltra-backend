@@ -80,6 +80,7 @@ r.get('/dossier', async (req, res) => {
     enlistedAt,
     daysOfService,
     memberNumber: user.memberNumber || null,
+    oathDone: user.oathDone || false,
     purchaseCount: user.purchaseCount || 0,
     decorations: user.decorations.map(d => ({
       id: d.id,

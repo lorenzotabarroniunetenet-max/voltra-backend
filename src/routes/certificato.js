@@ -7,8 +7,13 @@ const r = Router()
 // ── GET /api/certificato/pdf — genera PDF certificato per il membro loggato ──
 r.get('/pdf', requireAuth, async (req, res) => {
   try {
+    // Admin può richiedere il certificato di qualsiasi utente
+    const targetId = (req.user.role === 'ADMIN' && req.query.userId)
+      ? req.query.userId
+      : req.user.id
+
     const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
+      where: { id: targetId },
       select: {
         name: true, rank: true, matricola: true, memberNumber: true,
         enrolledAt: true, approvedAt: true, membershipTxHash: true, membershipTokenId: true,

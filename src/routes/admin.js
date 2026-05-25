@@ -1059,4 +1059,32 @@ r.patch('/users/:id/oath', async (req, res) => {
   } catch (e) { res.status(400).json({ error: e.message }) }
 })
 
+// ── Admin: trade log ──
+r.get('/users/:id/tradelog', async (req, res) => {
+  const logs = await prisma.tradeLog.findMany({
+    where: { userId: req.params.id },
+    orderBy: { createdAt: 'desc' },
+  })
+  res.json(logs)
+})
+
+r.post('/users/:id/tradelog', async (req, res) => {
+  const { type, note } = req.body
+  if (!['W','L'].includes(type)) return res.status(400).json({ error: 'type must be W or L' })
+  const log = await prisma.tradeLog.create({
+    data: { userId: req.params.id, type, note: note || null }
+  })
+  res.json(log)
+})
+
+r.delete('/users/:id/tradelog/:logId', async (req, res) => {
+  await prisma.tradeLog.delete({ where: { id: req.params.logId } }).catch(() => {})
+  res.json({ ok: true })
+})
+
+r.delete('/users/:id/tradelog', async (req, res) => {
+  await prisma.tradeLog.deleteMany({ where: { userId: req.params.id } })
+  res.json({ ok: true })
+})
+
 export default r

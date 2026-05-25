@@ -81,6 +81,7 @@ model User {
   walletAddress     String?
   membershipTokenId String?
   membershipTxHash  String?
+  tradeLogs         TradeLog[]   @relation("userTradeLogs")
   createdAt         DateTime     @default(now())
   propAccounts      PropAccount[]
   payoutRequests    PayoutRequest[]
@@ -202,7 +203,15 @@ model Notification {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model Ceremony {
+model TradeLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation("userTradeLogs", fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // 'W' | 'L'
+  note      String?
+  createdAt DateTime @default(now())
+  @@index([userId, createdAt])
+}
   id              String    @id @default(cuid())
   userId          String
   type            String
