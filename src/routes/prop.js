@@ -152,6 +152,12 @@ r.post('/payouts', async (req, res) => {
     })
     if (!account) return res.status(404).json({ error: 'Account non trovato o non attivo' })
 
+    // Check se il rimborso è abilitato dall'admin
+    const user = await prisma.user.findUnique({ where: { id: req.user.id }, select: { payoutEnabled: true } })
+    if (!user?.payoutEnabled) {
+      return res.status(403).json({ error: 'Il rimborso non è ancora disponibile. Contatta il Comando per abilitarlo.' })
+    }
+
     // HARD LIMIT: 7-day rule
     const lastPayout = await prisma.payoutRequest.findFirst({
       where: { accountId: data.accountId, status: { in: ['APPROVED', 'PAID', 'PENDING'] } },

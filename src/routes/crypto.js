@@ -21,16 +21,15 @@ r.get('/prices', async (req, res) => {
     if (!resp.ok) throw new Error('CoinGecko error')
     const data = await resp.json()
     priceCache = {
-      BTC:  data.bitcoin?.eur || 90000,
-      ETH:  data.ethereum?.eur || 3000,
-      USDT: data.tether?.eur || 0.92,
-      USDC: data['usd-coin']?.eur || 0.92,
+      BTC:  data.bitcoin?.eur   || 88000,
+      ETH:  data.ethereum?.eur  || 2800,
+      USDT: data.tether?.eur    || 0.93,
+      USDC: data['usd-coin']?.eur || 0.93,
     }
     priceCacheAt = now
     res.json(priceCache)
   } catch (e) {
-    // fallback se CoinGecko non risponde
-    res.json(priceCache || { BTC: 90000, ETH: 3000, USDT: 0.92, USDC: 0.92 })
+    res.json(priceCache || { BTC: 88000, ETH: 2800, USDT: 0.93, USDC: 0.93 })
   }
 })
 
@@ -104,7 +103,7 @@ r.post('/margin/me/pay', requireAuth, async (req, res) => {
   // Notifica admin Telegram
   try {
     const user = await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true, matricola: true } })
-    const { bot } = await import('./bot/index.js').catch(() => ({ bot: null }))
+    const { bot } = await import('../bot/index.js').catch(() => ({ bot: null }))
     const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID
     if (bot && adminChatId) {
       await bot.api.sendMessage(Number(adminChatId),

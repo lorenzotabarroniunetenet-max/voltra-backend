@@ -106,4 +106,37 @@ r.get('/expiring/:days', requireAuth, requireAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }) }
 })
 
+// Membro: richiede pagamento abbonamento
+r.post('/request-payment', requireAuth, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { name: true, matricola: true, rank: true, telegramChatId: true },
+    })
+    const sub = await prisma.subscription.findFirst({
+      where: { userId: req.user.id },
+      orderBy: { endDate: 'desc' },
+    })
+
+    // Notifica admin Telegram
+    const { bot } = await import('../bot/index.js').catch(() => ({ bot: null }))
+    const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID
+    if (bot && adminChatId) {
+      const endDate = sub?.endDate ? new Date(sub.endDate).toLocaleDateString('it-IT') : 'N/A'
+      await bot.api.sendMessage(Number(adminChatId),
+        `💳 <b>Richiesta pagamento abbonamento</b>\n\n` +
+        `<b>${user?.name}</b> (${user?.matricola} · ${user?.rank})\n` +
+        `Scadenza attuale: ${endDate}\n\n` +
+        `Il membro vuole rinnovare l'abbonamento mensile <b>€99</b>.`,
+        { parse_mode: 'HTML' }
+      ).catch(e => console.warn('[sub] telegram failed:', e.message))
+    }
+
+    res.json({ ok: true })
+  } catch (e) {
+    console.error('[sub] request-payment error:', e.message)
+    res.status(500).json({ error: e.message })
+  }
+})
+
 export default r

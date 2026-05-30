@@ -78,6 +78,7 @@ model User {
   purchaseCount     Int          @default(0)
   memberNumber      Int?         @unique
   oathDone          Boolean      @default(false)
+  payoutEnabled     Boolean      @default(false)
   walletAddress     String?
   membershipTokenId String?
   membershipTxHash  String?

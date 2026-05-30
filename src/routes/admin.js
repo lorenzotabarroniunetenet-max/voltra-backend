@@ -1092,7 +1092,14 @@ r.patch('/users/:id/oath', async (req, res) => {
   } catch (e) { res.status(400).json({ error: e.message }) }
 })
 
-// ── Admin: trade log ──
+// Admin: abilita/disabilita rimborso membro
+r.patch('/users/:id/payout-enabled', async (req, res) => {
+  const { enabled } = req.body
+  await prisma.user.update({ where: { id: req.params.id }, data: { payoutEnabled: !!enabled } })
+  res.json({ ok: true })
+})
+
+// Admin: trade log
 r.get('/users/:id/tradelog', async (req, res) => {
   const logs = await prisma.tradeLog.findMany({
     where: { userId: req.params.id },
