@@ -183,4 +183,11 @@ r.post('/payouts', async (req, res) => {
   } catch (e) { res.status(400).json({ error: e.message }) }
 })
 
+
+// Membro: controlla se rimborso abilitato
+r.get("/payout-status", requireAuth, async (req, res) => {
+  const user = await prisma.user.findUnique({ where: { id: req.user.id }, select: { payoutEnabled: true } })
+  res.json({ enabled: user?.payoutEnabled ?? false })
+})
+
 export default r

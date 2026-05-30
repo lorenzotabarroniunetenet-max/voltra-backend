@@ -258,4 +258,15 @@ r.post('/approve/:id', async (req, res) => {
   } catch (e) { res.status(400).json({ error: e.message }) }
 })
 
+
+// Membro: lista ordini propri
+r.get("/my-orders", requireAuth, async (req, res) => {
+  const orders = await prisma.order.findMany({
+    where: { userId: req.user.id },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, programName: true, amount: true, status: true, createdAt: true },
+  })
+  res.json(orders)
+})
+
 export default r
